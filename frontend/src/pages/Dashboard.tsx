@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { Flame, Calendar, Trophy, LogOut, Lock, X, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import DatePickerWrapper from '../components/DatePickerWrapper';
+import { getSeasonTheme } from '../utils/theme';
 
 const Dashboard = () => {
     const { user, logout, refreshUser } = useAuth();
@@ -12,11 +12,11 @@ const Dashboard = () => {
     const [activeSeasons, setActiveSeasons] = useState<any[]>([]);
 
     // Modal State
+    // Modal State
     const [selectedSeason, setSelectedSeason] = useState<any>(null);
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
-    const [loginDate, setLoginDate] = useState<Date | null>(new Date());
     const [checkInMessage, setCheckInMessage] = useState('');
     const [checkingIn, setCheckingIn] = useState(false);
 
@@ -65,10 +65,10 @@ const Dashboard = () => {
 
         try {
             // 1. Verify Credentials
-            await api.post('/auth/login', { email: loginEmail, password: loginPassword, date: loginDate });
+            await api.post('/auth/login', { email: loginEmail, password: loginPassword });
 
             // 2. Check-in
-            const res = await api.post(`/season/${selectedSeason._id}/checkin`, { date: loginDate });
+            const res = await api.post(`/season/${selectedSeason._id}/checkin`, {});
 
             // 3. Success Feedback
             setCheckInMessage(res.data.message || 'Checked in successfully!');
@@ -165,53 +165,67 @@ const Dashboard = () => {
                         </div>
                     ) : (
                         <div className="grid md:grid-cols-2 gap-6">
-                            {activeSeasons.map((season) => {
-                                // Find user streak for this season
-                                const seasonStreak = user.seasonStreaks?.find((s: any) => s.seasonId === season._id);
-                                const streakCount = seasonStreak ? seasonStreak.streak : 0;
+                            {activeSeasons
+                                .sort((a, b) => {
+                                    const streakA = user.seasonStreaks?.find((s: any) => s.seasonId === a._id)?.streak || 0;
+                                    const streakB = user.seasonStreaks?.find((s: any) => s.seasonId === b._id)?.streak || 0;
+                                    return streakB - streakA;
+                                })
+                                .map((season) => {
+                                    // Find user streak for this season
+                                    const seasonStreak = user.seasonStreaks?.find((s: any) => s.seasonId === season._id);
+                                    const streakCount = seasonStreak ? seasonStreak.streak : 0;
 
-                                const today = new Date();
-                                today.setHours(0, 0, 0, 0);
-                                const start = new Date(season.startDate);
-                                start.setHours(0, 0, 0, 0);
-                                const end = new Date(season.endDate);
-                                end.setHours(23, 59, 59, 999);
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    const start = new Date(season.startDate);
+                                    start.setHours(0, 0, 0, 0);
+                                    const end = new Date(season.endDate);
+                                    end.setHours(23, 59, 59, 999);
 
-                                const isActive = today >= start && today <= end;
+                                    const isActive = today >= start && today <= end;
+                                    const theme = getSeasonTheme(season._id);
 
-                                return (
-                                    <motion.div
-                                        key={season._id}
-                                        whileHover={{ y: -5 }}
-                                        onClick={() => handleSeasonClick(season)}
-                                        className="glass-panel p-6 rounded-2xl border-l-4 border-l-yellow-500 cursor-pointer hover:bg-white/5 transition-colors group"
-                                    >
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <h4 className="text-xl font-bold text-white group-hover:text-yellow-400 transition-colors">{season.name}</h4>
-                                                <p className="text-sm text-slate-400 flex items-center gap-1 mt-1">
-                                                    <Calendar size={14} />
-                                                    {new Date(season.startDate).toLocaleDateString()} - {new Date(season.endDate).toLocaleDateString()}
-                                                </p>
-                                            </div>
-                                            <div className={`px-3 py-1 rounded-full text-sm font-bold ${isActive ? 'bg-yellow-500/20 text-yellow-500' : 'bg-slate-700 text-slate-400'}`}>
-                                                {isActive ? 'Active' : 'Inactive'}
-                                            </div>
-                                        </div>
-                                        <div className="flex items-end gap-2">
-                                            <span className="text-4xl font-bold">{streakCount}</span>
-                                            <span className="text-slate-400 mb-1">Day Streak</span>
-                                        </div>
-                                        {
-                                            user.role !== 'admin' && (
-                                                <div className="mt-4 text-sm text-center bg-white/5 py-2 rounded-lg text-slate-400 group-hover:bg-white/10 transition-colors">
-                                                    Check-in
+                                    return (
+                                        <motion.div
+                                            key={season._id}
+                                            whileHover={{ y: -5 }}
+                                            onClick={() => handleSeasonClick(season)}
+                                            className={`p-6 rounded-2xl border-l-4 cursor-pointer backdrop-blur-lg border shadow-xl relative overflow-hidden group transition-all duration-300 ${theme.styles.cardBg} ${theme.styles.border} ${theme.styles.shadow}`}
+                                        >
+                                            <div className="flex justify-between items-start mb-4 z-10 relative">
+                                                <div>
+                                                    <h4 className={`text-xl font-bold text-white transition-colors flex items-center gap-2`}>
+                                                        {season.name}
+                                                        {isActive && <motion.span animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 2 }} className={`w-2 h-2 rounded-full ${theme.styles.textAccent.replace('text-', 'bg-')}`} />}
+                                                    </h4>
+                                                    <p className="text-sm text-slate-300 flex items-center gap-1 mt-1">
+                                                        <Calendar size={14} className={theme.styles.textAccent} />
+                                                        {new Date(season.startDate).toLocaleDateString()} - {new Date(season.endDate).toLocaleDateString()}
+                                                    </p>
                                                 </div>
-                                            )
-                                        }
-                                    </motion.div>
-                                );
-                            })}
+                                                <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${isActive ? `${theme.styles.badgeBg} ${theme.styles.badgeText}` : 'bg-slate-700/50 text-slate-400'}`}>
+                                                    {isActive ? 'Active' : 'Inactive'}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-end gap-2 z-10 relative">
+                                                <span className={`text-5xl font-extrabold ${theme.styles.textAccent}`}>{streakCount}</span>
+                                                <span className="text-slate-300 mb-2 font-medium">Day Streak</span>
+                                            </div>
+
+                                            {/* Abstract Decoration */}
+                                            <div className={`absolute -bottom-10 -right-10 w-32 h-32 rounded-full blur-[50px] opacity-30 ${theme.styles.blobColor}`} />
+
+                                            {
+                                                user.role !== 'admin' && (
+                                                    <div className={`mt-6 text-sm text-center py-2 rounded-lg font-bold transition-all ${theme.styles.badgeBg} ${theme.styles.badgeText} group-hover:brightness-125`}>
+                                                        Check-in Now
+                                                    </div>
+                                                )
+                                            }
+                                        </motion.div>
+                                    );
+                                })}
                         </div>
                     )}
                 </div>
@@ -265,15 +279,7 @@ const Dashboard = () => {
                                         required
                                     />
                                 </div>
-                                <div className="border border-white/20 rounded-lg p-2 bg-white/5">
-                                    <p className="text-sm text-yellow-400 mb-1">Select Check-in Date:</p>
-                                    <DatePickerWrapper
-                                        selected={loginDate}
-                                        onChange={(d) => setLoginDate(d)}
-                                        label=""
-                                        placeholderText="Select Date"
-                                    />
-                                </div>
+
 
                                 <button
                                     type="submit"

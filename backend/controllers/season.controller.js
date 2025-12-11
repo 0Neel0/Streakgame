@@ -39,7 +39,15 @@ exports.getSeasonById = async (req, res) => {
 exports.checkInSeason = async (req, res) => {
     const userId = req.user._id;
     const seasonId = req.params.id;
-    const { date } = req.body || {};
+
+    // Support 'date' or 'lastLoginDate' from body or query
+    let date = req.body.date || req.body.lastLoginDate || req.query.date || req.query.lastLoginDate;
+
+    // Validate if provided
+    if (date && isNaN(new Date(date).getTime())) {
+        console.warn(`Invalid date provided to checkIn: ${date}`);
+        date = null;
+    }
     const streakService = require('../services/streak.service');
 
     try {

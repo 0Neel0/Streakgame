@@ -14,7 +14,7 @@ const SeasonStreakSchema = new mongoose.Schema({
         type: Date,
         default: null
     }
-});
+}, { timestamps: true });
 
 const UserSchema = new mongoose.Schema({
     username: {

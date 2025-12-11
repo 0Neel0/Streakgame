@@ -104,14 +104,14 @@ const Login = () => {
                         </div>
                     </div>
 
-                    <div>
+                    {/* <div>
                         <DatePickerWrapper
                             selected={date}
                             onChange={(d) => setDate(d)}
                             label="Login Date (Optional)"
                             placeholderText="Select Date"
                         />
-                    </div>
+                    </div> */}
 
                     <button type="submit" className="btn-primary flex items-center justify-center gap-2 group bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700">
                         Login

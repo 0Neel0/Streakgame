@@ -43,7 +43,30 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
     // Validate User
-    const { email, password, date } = req.body || {};
+    // Validate User
+    const { email, password } = req.body || {};
+
+    console.log('--- LOGIN REQUEST DEBUG ---');
+    console.log('req.body:', req.body);
+    console.log('req.query:', req.query);
+
+    // Allow date from body OR query, supporting both 'date' and 'lastLoginDate' keys
+    let date = req.body.date || req.body.lastLoginDate || req.query.date || req.query.lastLoginDate;
+
+    console.log('Raw date detected:', date);
+
+    // Validate Date if provided
+    if (date) {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) {
+            console.warn(`Invalid date provided to login: ${date}`);
+            date = null; // Fallback to now if invalid
+        } else {
+            console.log('Parsed valid date:', d.toISOString());
+        }
+    } else {
+        console.log('No date provided, defaulting to NOW.');
+    }
     const user = await User.findOne({ email });
     if (!user) return res.status(400).send('Email is not found');
 
@@ -52,7 +75,10 @@ exports.login = async (req, res) => {
     if (!validPass) return res.status(400).send('Invalid password');
 
     // --- STREAK LOGIC ---
-    const today = normalizeDate(date ? new Date(date) : new Date());
+    const effectiveDate = date ? new Date(date) : new Date();
+    // console.log(`Login attempt for: ${email} on date: ${effectiveDate.toISOString()}`);
+
+    const today = normalizeDate(effectiveDate);
     const lastLogin = user.lastLoginDate ? normalizeDate(user.lastLoginDate) : null;
     let overallStreak = user.overallStreak;
 
@@ -75,16 +101,18 @@ exports.login = async (req, res) => {
     }
 
     user.overallStreak = overallStreak;
-    user.lastLoginDate = date ? new Date(date) : new Date(); // Save provided date or now
+    user.lastLoginDate = effectiveDate; // Save provided date or now
 
     // 2. Season Streak - REMOVED
     // Streak logic is now handled exclusively via explicit check-in per season.
 
-
     await user.save();
 
-    const token = generateToken({ _id: user._id, role: user.role });
-    res.header('auth-token', token).send({ token, user: { ...user._doc, password: '' } });
+    // We need the latest state
+    const updatedUser = await User.findById(user._id);
+
+    const token = generateToken({ _id: updatedUser._id, role: updatedUser.role });
+    res.header('auth-token', token).send({ token, user: { ...updatedUser._doc, password: '' } });
 };
 
 exports.getMe = async (req, res) => {

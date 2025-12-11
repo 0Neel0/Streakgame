@@ -4,8 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import { Flame, Calendar, Users, ArrowLeft, CheckCircle, Clock, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { getSeasonTheme } from '../utils/theme';
 
-import DatePickerWrapper from '../components/DatePickerWrapper';
+
 
 interface Season {
     _id: string;
@@ -32,11 +33,9 @@ const SeasonDetails = () => {
     const [message, setMessage] = useState('');
     const [currentStreak, setCurrentStreak] = useState(0);
 
-    // Login Form State
     const [showLogin, setShowLogin] = useState(false);
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
-    const [loginDate, setLoginDate] = useState<Date | null>(new Date());
     const [checkingIn, setCheckingIn] = useState(false);
 
     const fetchSeasonDetails = async () => {
@@ -78,10 +77,10 @@ const SeasonDetails = () => {
 
         try {
             // 1. Verify credentials (re-login)
-            await api.post('/auth/login', { email: loginEmail, password: loginPassword, date: loginDate });
+            await api.post('/auth/login', { email: loginEmail, password: loginPassword });
 
             // 2. Perform Check-in
-            const res = await api.post(`/season/${id}/checkin`, { date: loginDate });
+            const res = await api.post(`/season/${id}/checkin`, {});
 
             setMessage('Logged in successfully! Streak Updated.');
             if (res.data.streak) {
@@ -113,13 +112,14 @@ const SeasonDetails = () => {
     end.setHours(23, 59, 59, 999);
 
     const isActive = today >= start && today <= end;
+    const theme = season ? getSeasonTheme(season._id) : getSeasonTheme('default');
 
     return (
         <div className="min-h-screen bg-slate-900 text-white p-6 relative overflow-hidden">
             {/* Background Gradients */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-                <div className="absolute top-[10%] right-[10%] w-[30%] h-[30%] bg-blue-600/10 rounded-full blur-[100px]" />
-                <div className="absolute bottom-[10%] left-[10%] w-[30%] h-[30%] bg-green-600/10 rounded-full blur-[100px]" />
+                <div className={`absolute top-[10%] right-[10%] w-[40%] h-[40%] rounded-full blur-[100px] opacity-20 ${theme.styles.blobColor}`} />
+                <div className={`absolute bottom-[10%] left-[10%] w-[30%] h-[30%] rounded-full blur-[100px] opacity-20 ${theme.styles.blobColor}`} />
             </div>
 
             <div className="max-w-4xl mx-auto relative z-10">
@@ -127,22 +127,24 @@ const SeasonDetails = () => {
                     <ArrowLeft size={20} /> Back
                 </button>
 
-                <div className="glass-panel p-8 rounded-3xl mb-8">
-                    <h1 className="text-3xl font-bold mb-2">{season.name}</h1>
-                    <p className="text-slate-400 flex items-center gap-2">
+                <div className={`p-8 rounded-3xl mb-8 backdrop-blur-lg border shadow-xl ${theme.styles.cardBg} ${theme.styles.border} ${theme.styles.shadow}`}>
+                    <h1 className="text-4xl font-bold mb-2 text-white">{season.name}</h1>
+                    <p className={`flex items-center gap-2 ${theme.styles.textAccent}`}>
                         <Calendar size={18} />
                         {new Date(season.startDate).toLocaleDateString()} - {new Date(season.endDate).toLocaleDateString()}
                     </p>
 
-                    {isActive ? (
-                        <div className="mt-4 bg-green-500/20 text-green-400 inline-block px-4 py-2 rounded-lg font-bold">
-                            Season Active
-                        </div>
-                    ) : (
-                        <div className="mt-4 bg-red-500/20 text-red-400 inline-block px-4 py-2 rounded-lg font-bold">
-                            Season Inactive
-                        </div>
-                    )}
+                    <div className="mt-6 flex items-center gap-4">
+                        {isActive ? (
+                            <div className={`px-4 py-2 rounded-lg font-bold border ${theme.styles.badgeBg} ${theme.styles.badgeText} border-white/10`}>
+                                Season Active
+                            </div>
+                        ) : (
+                            <div className="bg-slate-700 text-slate-400 px-4 py-2 rounded-lg font-bold">
+                                Season Inactive
+                            </div>
+                        )}
+                    </div>
 
                     {message && (
                         <motion.div
@@ -201,15 +203,7 @@ const SeasonDetails = () => {
                                     className="input-field"
                                     required
                                 />
-                                <div className="border border-white/20 rounded-lg p-2 bg-white/5">
-                                    <p className="text-sm text-yellow-400 mb-1">Select Check-in Date:</p>
-                                    <DatePickerWrapper
-                                        selected={loginDate}
-                                        onChange={(d) => setLoginDate(d)}
-                                        label=""
-                                        placeholderText="Click to select date"
-                                    />
-                                </div>
+
                                 <div className="flex gap-2">
                                     <button
                                         type="button"
@@ -223,7 +217,7 @@ const SeasonDetails = () => {
                                         disabled={checkingIn}
                                         className="flex-1 btn-primary"
                                     >
-                                        {checkingIn ? 'Verifying...' : 'Login & Check-in'}
+                                        {checkingIn ? 'Verifying...' : 'Check-in'}
                                     </button>
                                 </div>
                             </motion.form>
@@ -248,25 +242,27 @@ const SeasonDetails = () => {
                                 <span className="text-center">Streak</span>
                                 <span className="text-right">Last Login</span>
                             </div>
-                            {seasonUsers.map((u, i) => (
-                                <motion.div
-                                    key={u._id}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: i * 0.05 }}
-                                    className="grid grid-cols-3 items-center bg-white/5 p-4 rounded-xl"
-                                >
-                                    <div className="font-bold">{u.username}</div>
-                                    <div className="text-center">
-                                        <span className="inline-block px-3 py-1 bg-green-500/20 text-green-400 rounded-full font-bold">
-                                            {u.streak}
-                                        </span>
-                                    </div>
-                                    <div className="text-right text-slate-400 text-sm">
-                                        {u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}
-                                    </div>
-                                </motion.div>
-                            ))}
+                            {seasonUsers
+                                .sort((a, b) => b.streak - a.streak)
+                                .map((u, i) => (
+                                    <motion.div
+                                        key={u._id}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: i * 0.05 }}
+                                        className="grid grid-cols-3 items-center bg-white/5 p-4 rounded-xl"
+                                    >
+                                        <div className="font-bold">{u.username}</div>
+                                        <div className="text-center">
+                                            <span className="inline-block px-3 py-1 bg-green-500/20 text-green-400 rounded-full font-bold">
+                                                {u.streak}
+                                            </span>
+                                        </div>
+                                        <div className="text-right text-slate-400 text-sm">
+                                            {u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}
+                                        </div>
+                                    </motion.div>
+                                ))}
                             {seasonUsers.length === 0 && <p className="text-center text-slate-500 py-4">No participants yet.</p>}
                         </div>
                     </motion.div>
