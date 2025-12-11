@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-slate-900 text-white;
+  }
+}
+
+/* Glassmorphism utilities */
+.glass-panel {
+  @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-xl;
+}
+
+.input-field {
+  @apply w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-500 transition-all text-white placeholder-slate-400;
+}
+
+.btn-primary {
+  @apply w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-lg transition-all transform hover:scale-[1.02] shadow-lg;
+}
+
+/* Datepicker Portal Fixes */
+#datepicker-portal {
+  position: relative;
+  z-index: 99999;
+}
+
+/* Ensure the calendar itself captures clicks */
+.react-datepicker-popper {
+  z-index: 99999 !important;
+}
