@@ -15,4 +15,7 @@ router.post('/season', verify, verifyAdmin, adminController.createSeason);
 router.get('/seasons', verify, verifyAdmin, adminController.getAllSeasons);
 router.put('/season/:id', verify, verifyAdmin, adminController.updateSeason);
 router.delete('/season/:id', verify, verifyAdmin, adminController.deleteSeason);
+router.get('/settings', verify, verifyAdmin, adminController.getSettings);
+router.put('/settings', verify, verifyAdmin, adminController.updateSettings);
+
 module.exports = router;

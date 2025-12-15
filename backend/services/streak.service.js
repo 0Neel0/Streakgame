@@ -51,6 +51,8 @@ exports.checkInUserToSeason = async (userId, seasonId, checkInDate) => {
     let seasonStreak = user.seasonStreaks.find(s => s.seasonId.toString() === seasonId);
     let message = '';
 
+    let xpGained = 0;
+
     if (seasonStreak) {
         // Check last login date
         const lastLogin = new Date(seasonStreak.lastLoginDate);
@@ -65,12 +67,21 @@ exports.checkInUserToSeason = async (userId, seasonId, checkInDate) => {
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays === 0) {
-            return { message: 'Already checked in today', streak: seasonStreak.streak };
+            return { message: 'Already checked in today', streak: seasonStreak.streak, xpGained: 0, totalXp: user.xp || 0 };
         } else if (diffDays === 1) {
             // Consecutive day
             seasonStreak.streak += 1;
             seasonStreak.lastLoginDate = now;
             message = 'Checked in successfully';
+
+            // XP Reward
+            if (seasonStreak.streak === 5) {
+                user.unclaimedRewards.push({ xp: 50, reason: `5 Day Season Streak` });
+            }
+            else if (seasonStreak.streak === 10) {
+                user.unclaimedRewards.push({ xp: 100, reason: `10 Day Season Streak` });
+            }
+
         } else {
             // Break in streak
             seasonStreak.streak = 1;
@@ -88,6 +99,22 @@ exports.checkInUserToSeason = async (userId, seasonId, checkInDate) => {
         message = 'Checked in successfully';
     }
 
+    if (xpGained > 0) {
+        user.xp = (user.xp || 0) + xpGained;
+    }
+
+    // --- XP REWARD LOGIC (SEASON) ---
+    // Every 3 days of season streak -> +30 XP
+    if (seasonStreak.streak > 0 && seasonStreak.streak % 3 === 0) {
+        user.unclaimedRewards.push({ xp: 30, reason: `3 Day Season Streak` });
+    }
+
     await user.save();
-    return { message, streak: seasonStreak.streak };
+
+    return {
+        message: `Checked in! Season Streak: ${seasonStreak.streak}`,
+        streak: seasonStreak.streak,
+        xpGained,
+        totalXp: user.xp
+    };
 };

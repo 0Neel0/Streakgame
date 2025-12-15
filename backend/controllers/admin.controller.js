@@ -1,9 +1,10 @@
 const User = require('../models/user.model');
 const Season = require('../models/season.model');
+const Settings = require('../models/settings.model');
 
 exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find({}, '-password').sort({ overallStreak: -1 });
+        const users = await User.find({ role: { $ne: 'admin' } }, '-password').sort({ overallStreak: -1 });
         res.json(users);
     } catch (err) {
         res.status(400).send(err);
@@ -35,7 +36,17 @@ exports.createSeason = async (req, res) => {
 exports.getAllSeasons = async (req, res) => {
     try {
         const seasons = await Season.find().sort({ startDate: -1 });
-        res.json(seasons);
+
+        // Count users for each season
+        const seasonsWithCount = await Promise.all(seasons.map(async (season) => {
+            const count = await User.countDocuments({ 'seasonStreaks.seasonId': season._id });
+            return {
+                ...season._doc,
+                userCount: count
+            };
+        }));
+
+        res.json(seasonsWithCount);
     } catch (err) {
         res.status(400).send(err);
     }
@@ -63,5 +74,32 @@ exports.deleteSeason = async (req, res) => {
         res.json({ message: 'Season deleted successfully' });
     } catch (err) {
         res.status(400).send(err.message || 'Error deleting season');
+    }
+};
+
+exports.getSettings = async (req, res) => {
+    try {
+        const settings = await Settings.getSettings();
+        res.json(settings);
+    } catch (err) {
+        res.status(500).send(err.message || 'Error fetching settings');
+    }
+};
+
+exports.updateSettings = async (req, res) => {
+    try {
+        const settings = await Settings.getSettings();
+        const { royalPassConfig } = req.body;
+
+        if (royalPassConfig) {
+            if (royalPassConfig.minStreak !== undefined) settings.royalPassConfig.minStreak = royalPassConfig.minStreak;
+            if (royalPassConfig.minSeasons !== undefined) settings.royalPassConfig.minSeasons = royalPassConfig.minSeasons;
+            if (royalPassConfig.xpReward !== undefined) settings.royalPassConfig.xpReward = royalPassConfig.xpReward;
+        }
+
+        await settings.save();
+        res.json(settings);
+    } catch (err) {
+        res.status(500).send(err.message || 'Error updating settings');
     }
 };

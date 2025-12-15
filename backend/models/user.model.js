@@ -44,7 +44,45 @@ const UserSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
-    seasonStreaks: [SeasonStreakSchema]
+    seasonStreaks: [SeasonStreakSchema],
+    xp: {
+        type: Number,
+        default: 0
+    },
+    profilePicture: {
+        type: String,
+        default: ''
+    },
+    description: {
+        type: String,
+        default: ''
+    },
+    hasClaimedRoyalPass: {
+        type: Boolean,
+        default: false
+    },
+    lastRoyalPassClaimDate: {
+        type: Date,
+        default: null
+    },
+    unclaimedRewards: [{
+        xp: Number,
+        reason: String,
+        date: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    spinData: {
+        count: {
+            type: Number,
+            default: 0
+        },
+        lastSpinDate: {
+            type: Date,
+            default: null
+        }
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);

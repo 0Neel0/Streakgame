@@ -2,21 +2,40 @@
 
 @layer base {
   body {
-    @apply bg-slate-900 text-white;
+    @apply bg-slate-950 text-slate-50 relative min-h-screen overflow-x-hidden selection:bg-indigo-500/30;
+    background-image: 
+        radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15), transparent 40%),
+        radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.15), transparent 40%);
   }
 }
 
 /* Glassmorphism utilities */
 .glass-panel {
-  @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-xl;
+  @apply bg-slate-900/40 backdrop-blur-xl border border-white/10 shadow-2xl ring-1 ring-white/5;
+}
+
+.glass-card-hover {
+    @apply transition-all duration-300 hover:bg-slate-800/60 hover:shadow-indigo-500/10 hover:border-indigo-500/30 hover:-translate-y-1;
 }
 
 .input-field {
-  @apply w-full bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-500 transition-all text-white placeholder-slate-400;
+  @apply w-full bg-slate-900/60 border border-slate-700/60 rounded-xl px-4 py-3.5 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all text-white placeholder-slate-500 shadow-inner;
 }
 
 .btn-primary {
-  @apply w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-lg transition-all transform hover:scale-[1.02] shadow-lg;
+  @apply w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-[length:200%_auto] hover:bg-right text-white font-bold py-3.5 rounded-xl transition-all duration-500 transform hover:scale-[1.02] shadow-lg shadow-indigo-500/25 active:scale-95;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-700/50 rounded-full hover:bg-slate-600/80 transition-colors;
 }
 
 /* Datepicker Portal Fixes */

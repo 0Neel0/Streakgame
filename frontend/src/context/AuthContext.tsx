@@ -10,6 +10,11 @@ interface User {
     overallStreak: number;
     seasonStreaks: any[];
     lastLoginDate?: string;
+    xp?: number;
+    profilePicture?: string;
+    description?: string;
+    hasClaimedRoyalPass?: boolean;
+    unclaimedRewards?: { xp: number; reason: string; date?: string }[];
 }
 
 interface AuthContextType {

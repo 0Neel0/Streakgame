@@ -1,0 +1,38 @@
+# Task: Refactor XP Logic to Overall Streak
+
+- [x] Remove XP calculation from `streak.service.js` <!-- id: 0 -->
+- [x] Add XP calculation to `auth.controller.js` (login function) <!-- id: 1 -->
+- [x] Update frontend `Dashboard.tsx` to handle XP from login response <!-- id: 2 -->
+- [x] Update frontend `SeasonDetails.tsx` to handle XP from login response <!-- id: 3 -->
+- [x] Verify `Login.tsx` handles XP or pass it to Dashboard <!-- id: 4 -->
+- [x] Implement "Claim Reward" button and XP increase animation in `XPPopup` <!-- id: 5 -->
+- [x] Enhance `XPPopup` UI (Premium aesthetics, particles, glow) <!-- id: 6 -->
+- [x] Implement User Profile Management <!-- id: 7 -->
+    - [x] Update Backend: User Model & Update Endpoint <!-- id: 8 -->
+    - [x] Update Frontend: Profile Modal/Page <!-- id: 9 -->
+    - [x] Update Frontend: Dashboard Integration <!-- id: 10 -->
+- [x] Implement Season Streak XP (+30 XP every 3 days) <!-- id: 11 -->
+    - [x] Update `streak.service.js` to calculate season XP <!-- id: 12 -->
+    - [x] Update `Dashboard.tsx` to aggregate XP from login and check-in <!-- id: 13 -->
+- [x] Implement Royal Pass Feature (+200 XP) <!-- id: 14 -->
+    - [x] Backend: Add `hasClaimedRoyalPass` to User model <!-- id: 15 -->
+    - [x] Backend: Create `/auth/claim-royal-pass` endpoint <!-- id: 16 -->
+    - [x] Frontend: Add Royal Pass UI Card in Dashboard <!-- id: 17 -->
+    - [x] Frontend: Integrate Claim Logic <!-- id: 18 -->
+- [x] Display Royal Pass in Admin Panel <!-- id: 19 -->
+    - [x] Update `Admin.tsx` to show Crown/Status column <!-- id: 20 -->
+    - [x] Exclude Admins from User List <!-- id: 21 -->
+- [x] Implement Royal Pass Filter Button (Admin) <!-- id: 22 -->
+    - [x] Update `Admin.tsx` with filter state and UI button <!-- id: 23 -->
+- [x] Disable Admin Streaks <!-- id: 24 -->
+    - [x] Backend: Skip streak logic for admins in `login` <!-- id: 25 -->
+    - [x] Frontend: Hide Streak/XP cards for admins in `Dashboard.tsx` <!-- id: 26 -->
+- [x] Implement Admin Season User Count <!-- id: 27 -->
+    - [x] Backend: Update `admin.controller.js` to return `userCount` <!-- id: 28 -->
+    - [x] Frontend: Update `Dashboard.tsx` to show "Users" count for Admins <!-- id: 29 -->
+- [x] Secure Royal Pass Endpoint <!-- id: 30 -->
+    - [x] Backend: Prevent admins from claiming Royal Pass in `auth.controller.js` <!-- id: 31 -->
+- [x] Implement Admin User Sorting <!-- id: 32 -->
+    - [x] Frontend: Add sort state (sortBy, sortOrder) in `Admin.tsx` <!-- id: 33 -->
+    - [x] Frontend: Implement sort logic for Overall Streak and XP <!-- id: 34 -->
+    - [x] Frontend: Add UI controls/headers for sorting <!-- id: 35 -->
