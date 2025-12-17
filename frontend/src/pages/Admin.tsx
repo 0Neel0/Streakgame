@@ -20,6 +20,7 @@ const Admin = () => {
     const navigate = useNavigate();
     const [users, setUsers] = useState<StreakUser[]>([]);
     const [seasons, setSeasons] = useState<any[]>([]);
+    const [royalPasses, setRoyalPasses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Create Season Form
@@ -27,6 +28,18 @@ const Admin = () => {
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
     const [message, setMessage] = useState('');
+
+    // Royal Pass Form
+    const [passForm, setPassForm] = useState<{
+        name: string;
+        description: string;
+        xpReward: number;
+        minStreak: number;
+        minSeasons: number;
+        startDate: Date | null;
+        endDate: Date | null;
+    }>({ name: '', description: '', xpReward: 200, minStreak: 3, minSeasons: 3, startDate: null, endDate: null });
+    const [editingPass, setEditingPass] = useState<any>(null);
 
     // Edit/Delete State
     const [editingSeason, setEditingSeason] = useState<any>(null);
@@ -42,21 +55,16 @@ const Admin = () => {
     const [sortBy, setSortBy] = useState<'default' | 'streak' | 'xp'>('default');
     const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
 
-    // Royal Pass Config
-    const [rpConfig, setRpConfig] = useState({ minStreak: 3, minSeasons: 3, xpReward: 200 });
-
     const fetchData = async () => {
         try {
-            const [usersRes, seasonsRes, settingsRes] = await Promise.all([
+            const [usersRes, seasonsRes, passesRes] = await Promise.all([
                 api.get('/admin/users'),
                 api.get('/admin/seasons'),
-                api.get('/admin/settings')
+                api.get('/admin/royal-pass')
             ]);
             setUsers(usersRes.data);
             setSeasons(seasonsRes.data);
-            if (settingsRes.data?.royalPassConfig) {
-                setRpConfig(settingsRes.data.royalPassConfig);
-            }
+            setRoyalPasses(passesRes.data);
         } catch (err) {
             console.error(err);
         } finally {
@@ -64,17 +72,8 @@ const Admin = () => {
         }
     };
 
-    const handleUpdateSettings = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            await api.put('/admin/settings', { royalPassConfig: rpConfig });
-            setMessage('Settings Updated Successfully!');
-            setTimeout(() => setMessage(''), 3000);
-        } catch (err) {
-            console.error(err);
-            setMessage('Failed to update settings');
-        }
-    };
+    // handleUpdateSettings removed
+
 
     useEffect(() => {
         fetchData();
@@ -239,7 +238,7 @@ const Admin = () => {
                             </form>
                         </motion.div>
 
-                        {/* ROYAL PASS CONFIG */}
+                        {/* ROYAL PASS MANAGEMENT */}
                         <motion.div
                             initial={{ x: -20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
@@ -250,41 +249,133 @@ const Admin = () => {
                                 <div className="p-2 bg-amber-500/10 rounded-lg">
                                     <Crown className="text-amber-500" size={20} />
                                 </div>
-                                Royal Pass Settings
+                                Manage Royal Passes
                             </h2>
-                            <form onSubmit={handleUpdateSettings} className="space-y-4">
+
+                            <form onSubmit={async (e) => {
+                                e.preventDefault();
+                                try {
+                                    await api.post('/admin/royal-pass', {
+                                        ...passForm,
+                                        startDate: passForm.startDate?.toISOString(),
+                                        endDate: passForm.endDate?.toISOString()
+                                    });
+                                    setMessage('Royal Pass Created Successfully!');
+                                    setPassForm({ name: '', description: '', xpReward: 200, minStreak: 3, minSeasons: 3, startDate: null, endDate: null });
+                                    fetchData();
+                                    setTimeout(() => setMessage(''), 3000);
+                                } catch (err) {
+                                    console.error(err);
+                                    setMessage('Failed to create pass');
+                                }
+                            }} className="space-y-4 mb-8">
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-2">Min Streak (Days)</label>
+                                    <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-2">Pass Name</label>
                                     <input
-                                        type="number"
+                                        type="text"
                                         className="input-field"
-                                        value={rpConfig.minStreak}
-                                        onChange={(e) => setRpConfig({ ...rpConfig, minStreak: parseInt(e.target.value) })}
-                                        min="1"
+                                        value={passForm.name}
+                                        onChange={(e) => setPassForm({ ...passForm, name: e.target.value })}
+                                        placeholder="e.g. Elite Pass Season 1"
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-2">Min Streak</label>
+                                        <input
+                                            type="number"
+                                            className="input-field"
+                                            value={passForm.minStreak}
+                                            onChange={(e) => setPassForm({ ...passForm, minStreak: parseInt(e.target.value) })}
+                                            min="1"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-2">Min Seasons</label>
+                                        <input
+                                            type="number"
+                                            className="input-field"
+                                            value={passForm.minSeasons}
+                                            onChange={(e) => setPassForm({ ...passForm, minSeasons: parseInt(e.target.value) })}
+                                            min="0"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <DatePickerWrapper
+                                        label="Start Date"
+                                        selected={passForm.startDate}
+                                        onChange={(date) => setPassForm({ ...passForm, startDate: date })}
+                                        placeholderText="Start Date"
+                                    />
+                                    <DatePickerWrapper
+                                        label="End Date"
+                                        selected={passForm.endDate}
+                                        onChange={(date) => setPassForm({ ...passForm, endDate: date })}
+                                        placeholderText="End Date"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-2">Min Seasons Count</label>
+                                    <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-2">XP Reward</label>
                                     <input
                                         type="number"
                                         className="input-field"
-                                        value={rpConfig.minSeasons}
-                                        onChange={(e) => setRpConfig({ ...rpConfig, minSeasons: parseInt(e.target.value) })}
-                                        min="1"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-2">XP Reward Amount</label>
-                                    <input
-                                        type="number"
-                                        className="input-field"
-                                        value={rpConfig.xpReward}
-                                        onChange={(e) => setRpConfig({ ...rpConfig, xpReward: parseInt(e.target.value) })}
+                                        value={passForm.xpReward}
+                                        onChange={(e) => setPassForm({ ...passForm, xpReward: parseInt(e.target.value) })}
                                         min="0"
                                     />
                                 </div>
-                                <button className="btn-primary" type="submit">Update Settings</button>
+                                <button className="btn-primary" type="submit">Create Pass</button>
                             </form>
+
+                            {/* Pass List */}
+                            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                {royalPasses.map((pass: any) => (
+                                    <div key={pass._id} className="p-3 rounded-xl bg-slate-800/40 border border-slate-700/50 flex justify-between items-start group hover:bg-slate-800/60 transition-colors">
+                                        <div>
+                                            <div className="font-bold text-amber-400">{pass.name}</div>
+                                            <div className="text-[10px] text-slate-400 flex flex-col mt-1">
+                                                <span>{pass.xpReward} XP Reward</span>
+                                                <span>Requires: {pass.minStreak}d Streak & {pass.minSeasons} Seasons</span>
+                                                {(pass.startDate || pass.endDate) && (
+                                                    <span className="text-slate-500 mt-1">
+                                                        {pass.startDate ? new Date(pass.startDate).toLocaleDateString() : 'Now'} - {pass.endDate ? new Date(pass.endDate).toLocaleDateString() : 'Forever'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => setEditingPass({
+                                                    ...pass,
+                                                    startDate: pass.startDate ? new Date(pass.startDate) : null,
+                                                    endDate: pass.endDate ? new Date(pass.endDate) : null
+                                                })}
+                                                className="p-1.5 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors"
+                                            >
+                                                <Edit2 size={12} />
+                                            </button>
+                                            <button
+                                                onClick={async () => {
+                                                    if (window.confirm('Delete this pass?')) {
+                                                        try {
+                                                            await api.delete(`/admin/royal-pass/${pass._id}`);
+                                                            setMessage('Pass Deleted');
+                                                            fetchData();
+                                                            setTimeout(() => setMessage(''), 3000);
+                                                        } catch (e) { console.error(e); }
+                                                    }
+                                                }}
+                                                className="p-1.5 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {royalPasses.length === 0 && <p className="text-center text-slate-500 text-xs py-4">No Royal Passes created yet.</p>}
+                            </div>
                         </motion.div>
                     </div>
 
@@ -607,6 +698,105 @@ const Admin = () => {
                     </div>
                 )}
             </AnimatePresence >
+
+            {/* Edit Royal Pass Modal */}
+            <AnimatePresence>
+                {editingPass && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="w-full max-w-md bg-slate-900 border border-slate-700 p-8 rounded-3xl shadow-2xl relative"
+                        >
+                            <button
+                                onClick={() => setEditingPass(null)}
+                                className="absolute top-4 right-4 text-slate-400 hover:text-white"
+                            >
+                                <X size={20} />
+                            </button>
+                            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                                <Crown className="text-amber-500" /> Edit Royal Pass
+                            </h2>
+                            <form onSubmit={async (e) => {
+                                e.preventDefault();
+                                try {
+                                    await api.put(`/admin/royal-pass/${editingPass._id}`, {
+                                        ...editingPass,
+                                        startDate: editingPass.startDate?.toISOString(),
+                                        endDate: editingPass.endDate?.toISOString()
+                                    });
+                                    setMessage('Pass Updated Successfully!');
+                                    setEditingPass(null);
+                                    fetchData();
+                                    setTimeout(() => setMessage(''), 3000);
+                                } catch (err) {
+                                    console.error(err);
+                                    setMessage('Failed to update pass');
+                                }
+                            }} className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-2">Pass Name</label>
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        value={editingPass.name}
+                                        onChange={(e) => setEditingPass({ ...editingPass, name: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-2">Min Streak</label>
+                                        <input
+                                            type="number"
+                                            className="input-field"
+                                            value={editingPass.minStreak}
+                                            onChange={(e) => setEditingPass({ ...editingPass, minStreak: parseInt(e.target.value) })}
+                                            min="1"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-2">Min Seasons</label>
+                                        <input
+                                            type="number"
+                                            className="input-field"
+                                            value={editingPass.minSeasons}
+                                            onChange={(e) => setEditingPass({ ...editingPass, minSeasons: parseInt(e.target.value) })}
+                                            min="0"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <DatePickerWrapper
+                                        label="Start Date"
+                                        selected={editingPass.startDate}
+                                        onChange={(date) => setEditingPass({ ...editingPass, startDate: date })}
+                                        placeholderText="Start Date"
+                                    />
+                                    <DatePickerWrapper
+                                        label="End Date"
+                                        selected={editingPass.endDate}
+                                        onChange={(date) => setEditingPass({ ...editingPass, endDate: date })}
+                                        placeholderText="End Date"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase ml-1 block mb-2">XP Reward</label>
+                                    <input
+                                        type="number"
+                                        className="input-field"
+                                        value={editingPass.xpReward}
+                                        onChange={(e) => setEditingPass({ ...editingPass, xpReward: parseInt(e.target.value) })}
+                                        min="0"
+                                    />
+                                </div>
+                                <button className="btn-primary mt-2" type="submit">Save Changes</button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div >
     );
 };

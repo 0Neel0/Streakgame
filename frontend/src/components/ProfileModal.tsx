@@ -49,9 +49,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                     >
                         <button
                             onClick={onClose}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-white"
+                            className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-700/50 hover:bg-slate-700 p-2 rounded-full transition-all"
                         >
-                            <X size={24} />
+                            <X size={20} />
                         </button>
 
                         <h2 className="text-2xl font-bold mb-6 text-white flex items-center gap-2">
@@ -59,58 +59,92 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                         </h2>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            {/* Profile Picture Preview */}
-                            <div className="flex justify-center mb-6">
-                                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-indigo-500/30 bg-slate-900 relative">
-                                    {profilePicture ? (
-                                        <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-slate-500">
-                                            <User size={32} />
+                            {/* Profile Picture Upload Section */}
+                            <div className="flex flex-col items-center justify-center mb-8">
+                                <div className="relative group cursor-pointer">
+                                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-indigo-500/30 bg-slate-900 relative shadow-2xl shadow-indigo-500/20 group-hover:border-indigo-500 transition-all duration-300">
+                                        {profilePicture ? (
+                                            <img src={profilePicture} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-slate-500 bg-slate-800">
+                                                <User size={48} />
+                                            </div>
+                                        )}
+
+                                        {/* Overlay */}
+                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
+                                            <ImageIcon className="text-white drop-shadow-lg" size={32} />
                                         </div>
-                                    )}
-                                </div>
-                            </div>
+                                    </div>
 
-                            <div>
-                                <label className="text-sm text-slate-400 block mb-1">Username</label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-3.5 text-slate-500" size={18} />
+                                    {/* Upload Trigger */}
                                     <input
-                                        type="text"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        className="input-field !pl-10 w-full"
-                                        placeholder="Username"
-                                        required
+                                        type="file"
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                        accept="image/*"
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+
+                                            const formData = new FormData();
+                                            formData.append('avatar', file);
+
+                                            // Show loading state specifically for image
+                                            const toastId = toast.loading('Uploading image...');
+
+                                            try {
+                                                const res = await api.post('/auth/upload-avatar', formData, {
+                                                    headers: { 'Content-Type': 'multipart/form-data' }
+                                                });
+                                                setProfilePicture(res.data.profilePicture);
+                                                toast.success('Image uploaded!', { id: toastId });
+                                            } catch (err: any) {
+                                                console.error(err);
+                                                toast.error(err.response?.data?.message || 'Upload failed', { id: toastId });
+                                            }
+                                        }}
                                     />
+
+                                    <div className="absolute bottom-0 right-0 bg-indigo-600 p-2 rounded-full border-4 border-slate-800 shadow-lg group-hover:bg-indigo-500 transition-colors">
+                                        <div className="w-4 h-4 flex items-center justify-center">
+                                            <span className="text-white text-xs font-bold">+</span>
+                                        </div>
+                                    </div>
                                 </div>
+                                <p className="text-slate-400 text-sm mt-3 font-medium">Click to change profile picture</p>
                             </div>
 
-                            <div>
-                                <label className="text-sm text-slate-400 block mb-1">Profile Picture URL</label>
-                                <div className="relative">
-                                    <ImageIcon className="absolute left-3 top-3.5 text-slate-500" size={18} />
-                                    <input
-                                        type="url"
-                                        value={profilePicture}
-                                        onChange={(e) => setProfilePicture(e.target.value)}
-                                        className="input-field !pl-10 w-full"
-                                        placeholder="https://example.com/image.png"
-                                    />
+                            <div className="space-y-5">
+                                <div>
+                                    <label className="text-sm font-medium text-slate-300 block mb-2 uppercase tracking-wider">Username</label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <User className="text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={18} />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={username}
+                                            onChange={(e) => setUsername(e.target.value)}
+                                            className="w-full bg-slate-900/50 border border-slate-700 text-white text-sm rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 block pl-10 p-3 transition-all placeholder:text-slate-600"
+                                            placeholder="Your unique username"
+                                            required
+                                        />
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div>
-                                <label className="text-sm text-slate-400 block mb-1">About Me</label>
-                                <div className="relative">
-                                    <FileText className="absolute left-3 top-3.5 text-slate-500" size={18} />
-                                    <textarea
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
-                                        className="input-field !pl-10 w-full min-h-[100px] py-3"
-                                        placeholder="Tell us about yourself..."
-                                    />
+                                <div>
+                                    <label className="text-sm font-medium text-slate-300 block mb-2 uppercase tracking-wider">About Me</label>
+                                    <div className="relative group">
+                                        <div className="absolute top-3 left-3 pointer-events-none">
+                                            <FileText className="text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={18} />
+                                        </div>
+                                        <textarea
+                                            value={description}
+                                            onChange={(e) => setDescription(e.target.value)}
+                                            className="w-full bg-slate-900/50 border border-slate-700 text-white text-sm rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 block pl-10 p-3 min-h-[120px] transition-all placeholder:text-slate-600 resize-none"
+                                            placeholder="Write something about yourself..."
+                                        />
+                                    </div>
                                 </div>
                             </div>
 

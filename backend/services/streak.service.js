@@ -33,19 +33,21 @@ exports.checkInUserToSeason = async (userId, seasonId, checkInDate) => {
         throw new Error('Season is not currently active');
     }
 
-    // --- Strict Check: Must match global login date ---
+    // --- Update Global Login Date if needed ---
+    // Checking into a season counts as being active today.
     if (user.lastLoginDate) {
         const userLastLogin = new Date(user.lastLoginDate);
         userLastLogin.setHours(0, 0, 0, 0);
-
         const checkInNormalized = new Date(now);
         checkInNormalized.setHours(0, 0, 0, 0);
 
-        if (userLastLogin.getTime() !== checkInNormalized.getTime()) {
-            throw new Error('Check-in date must match your last login date');
+        // If user hasn't logged in "today" but is checking in, update their global lastLoginDate
+        if (userLastLogin.getTime() < checkInNormalized.getTime()) {
+            user.lastLoginDate = now;
         }
     } else {
-        throw new Error('User has no login record');
+        // First ever login/activity
+        user.lastLoginDate = now;
     }
 
     let seasonStreak = user.seasonStreaks.find(s => s.seasonId.toString() === seasonId);

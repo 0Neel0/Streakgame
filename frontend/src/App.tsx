@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import SeasonDetails from './pages/SeasonDetails';
+import GithubCallback from './pages/GithubCallback';
 
 const PrivateRoute = ({ children }: { children: React.ReactElement }) => {
   const { user, loading } = useAuth();
@@ -24,6 +25,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/auth/github/callback" element={<GithubCallback />} />
             <Route
               path="/dashboard"
               element={

@@ -29,7 +29,17 @@ const UserSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true
+        required: false
+    },
+    googleId: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    githubId: {
+        type: String,
+        unique: true,
+        sparse: true
     },
     role: {
         type: String,
@@ -57,13 +67,21 @@ const UserSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    claimedRoyalPasses: [{
+        passId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'RoyalPass'
+        },
+        claimDate: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    // Deprecated but kept for schema compatibility if needed, or we can just remove it.
+    // Let's migrate logic to use claimedRoyalPasses.
     hasClaimedRoyalPass: {
         type: Boolean,
         default: false
-    },
-    lastRoyalPassClaimDate: {
-        type: Date,
-        default: null
     },
     unclaimedRewards: [{
         xp: Number,
@@ -82,7 +100,30 @@ const UserSchema = new mongoose.Schema({
             type: Date,
             default: null
         }
-    }
+    },
+    friends: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    friendRequests: [{
+        from: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        status: {
+            type: String,
+            enum: ['pending', 'accepted', 'rejected'],
+            default: 'pending'
+        },
+        date: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    sentFriendRequests: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);

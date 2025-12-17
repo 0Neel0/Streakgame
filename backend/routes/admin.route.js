@@ -18,4 +18,10 @@ router.delete('/season/:id', verify, verifyAdmin, adminController.deleteSeason);
 router.get('/settings', verify, verifyAdmin, adminController.getSettings);
 router.put('/settings', verify, verifyAdmin, adminController.updateSettings);
 
+// Royal Pass Routes
+router.get('/royal-pass', verify, verifyAdmin, adminController.getAllRoyalPasses);
+router.post('/royal-pass', verify, verifyAdmin, adminController.createRoyalPass);
+router.put('/royal-pass/:id', verify, verifyAdmin, adminController.updateRoyalPass);
+router.delete('/royal-pass/:id', verify, verifyAdmin, adminController.deleteRoyalPass);
+
 module.exports = router;

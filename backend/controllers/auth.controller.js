@@ -3,6 +3,9 @@ const Season = require('../models/season.model');
 const Settings = require('../models/settings.model');
 const { hashPassword, comparePassword } = require('../utils/hash');
 const { generateToken } = require('../utils/jwt');
+const { OAuth2Client } = require('google-auth-library');
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Helper to normalize date (strip time)
 const normalizeDate = (date) => {
@@ -156,6 +159,254 @@ exports.login = async (req, res) => {
     res.header('auth-token', token).send({ token, user: { ...updatedUser._doc, password: '' }, xpGained });
 };
 
+exports.googleLogin = async (req, res) => {
+    const { token, googleAccessToken } = req.body;
+    try {
+        let name, email, picture, googleId;
+
+        if (googleAccessToken) {
+            // Option 1: Verify Access Token by fetching UserInfo
+            const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { Authorization: `Bearer ${googleAccessToken}` }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch user data with access token');
+            }
+
+            const data = await response.json();
+            name = data.name;
+            email = data.email;
+            picture = data.picture;
+            googleId = data.sub;
+
+        } else if (token) {
+            // Option 2: Verify ID Token
+            const ticket = await client.verifyIdToken({
+                idToken: token,
+                audience: process.env.GOOGLE_CLIENT_ID
+            });
+            const payload = ticket.getPayload();
+            name = payload.name;
+            email = payload.email;
+            picture = payload.picture;
+            googleId = payload.sub;
+        } else {
+            return res.status(400).send('No token provided');
+        }
+
+        let user = await User.findOne({ email });
+
+        if (user) {
+            // User exists, update googleId if not present (linking accounts)
+            if (!user.googleId) {
+                user.googleId = googleId;
+            }
+            // Update profile picture if empty
+            if (!user.profilePicture) {
+                user.profilePicture = picture;
+            }
+        } else {
+            // New user, create account
+            // Generate a unique username based on name + random suffix if needed? 
+            // Or just use name and check for collision.
+            let username = name.replace(/\s+/g, '').toLowerCase();
+            let usernameExists = await User.findOne({ username });
+            if (usernameExists) {
+                username += Math.floor(Math.random() * 10000);
+            }
+
+            user = new User({
+                username,
+                email,
+                googleId,
+                profilePicture: picture,
+                role: 'user'
+            });
+        }
+
+        // Update login date logic similar to normal login
+        const effectiveDate = new Date();
+        // Capture old login date BEFORE updating
+        const oldLastLoginDate = user.lastLoginDate;
+
+        user.lastLoginDate = effectiveDate;
+
+        // Overall Streak Logic (Copying from login)
+        let xpGained = 0;
+        let overallStreak = user.overallStreak;
+        const today = normalizeDate(effectiveDate);
+
+        if (user.role !== 'admin') {
+            const lastLogin = oldLastLoginDate ? normalizeDate(oldLastLoginDate) : null;
+
+            if (lastLogin) {
+                const diffTime = Math.abs(today - lastLogin);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays === 1) {
+                    overallStreak += 1;
+                } else if (diffDays > 1) {
+                    overallStreak = 1;
+                }
+            } else {
+                overallStreak = 1;
+            }
+
+            // XP Logic
+            let incremented = false;
+            if (lastLogin) {
+                const diffTime = Math.abs(today - lastLogin);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays === 1) incremented = true;
+            } else {
+                if (overallStreak === 1 && !lastLogin) incremented = true; // First login ever
+            }
+
+            if (incremented) {
+                if (overallStreak > 0 && overallStreak % 10 === 0) {
+                    user.unclaimedRewards.push({ xp: 100, reason: `10 Day Global Streak` });
+                } else if (overallStreak > 0 && overallStreak % 5 === 0) {
+                    user.unclaimedRewards.push({ xp: 50, reason: `5 Day Global Streak` });
+                }
+            }
+            user.overallStreak = overallStreak;
+        }
+
+        await user.save();
+
+        const authToken = generateToken({ _id: user._id, role: user.role });
+        res.header('auth-token', authToken).send({ token: authToken, user: { ...user._doc, password: '' }, xpGained });
+
+    } catch (err) {
+        console.error('Google Login Error:', err);
+        res.status(400).send('Google Login Failed');
+    }
+};
+
+exports.githubLogin = async (req, res) => {
+    const { code } = req.body;
+    try {
+        // 1. Exchange Code for Token
+        const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json'
+            },
+            body: JSON.stringify({
+                client_id: process.env.GITHUB_CLIENT_ID,
+                client_secret: process.env.GITHUB_CLIENT_SECRET,
+                code
+            })
+        });
+
+        const tokenData = await tokenResponse.json();
+        if (tokenData.error) {
+            throw new Error(tokenData.error_description || 'Failed to exchange code for token');
+        }
+
+        const accessToken = tokenData.access_token;
+
+        // 2. Fetch User Profile
+        const userResponse = await fetch('https://api.github.com/user', {
+            headers: { Authorization: `token ${accessToken}` }
+        });
+        const userData = await userResponse.json();
+
+        // 3. Fetch Email (if private)
+        let email = userData.email;
+        if (!email) {
+            const emailResponse = await fetch('https://api.github.com/user/emails', {
+                headers: { Authorization: `token ${accessToken}` }
+            });
+            const emails = await emailResponse.json();
+            const primaryEmail = emails.find(e => e.primary && e.verified);
+            if (primaryEmail) email = primaryEmail.email;
+        }
+
+        if (!email) {
+            return res.status(400).send('No verified email found on GitHub account');
+        }
+
+        const githubId = userData.id.toString();
+        const username = userData.login;
+        const picture = userData.avatar_url;
+
+        // 4. Find or Create User
+        let user = await User.findOne({ email });
+
+        if (user) {
+            if (!user.githubId) user.githubId = githubId;
+            if (!user.profilePicture) user.profilePicture = picture;
+        } else {
+            // Check username collision
+            let finalUsername = username;
+            let usernameExists = await User.findOne({ username: finalUsername });
+            if (usernameExists) {
+                finalUsername += Math.floor(Math.random() * 10000);
+            }
+
+            user = new User({
+                username: finalUsername,
+                email,
+                githubId,
+                profilePicture: picture,
+                role: 'user'
+            });
+        }
+
+        // 5. Update Login/Streak Logic (Reused)
+        const effectiveDate = new Date();
+        const oldLastLoginDate = user.lastLoginDate;
+        user.lastLoginDate = effectiveDate;
+
+        let xpGained = 0;
+        let overallStreak = user.overallStreak;
+        const today = normalizeDate(effectiveDate);
+
+        if (user.role !== 'admin') {
+            const lastLogin = oldLastLoginDate ? normalizeDate(oldLastLoginDate) : null;
+            if (lastLogin) {
+                const diffTime = Math.abs(today - lastLogin);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays === 1) overallStreak += 1;
+                else if (diffDays > 1) overallStreak = 1;
+            } else {
+                overallStreak = 1;
+            }
+
+            // XP Logic
+            let incremented = false;
+            if (lastLogin) {
+                const diffTime = Math.abs(today - lastLogin);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays === 1) incremented = true;
+            } else {
+                if (overallStreak === 1 && !lastLogin) incremented = true;
+            }
+
+            if (incremented) {
+                if (overallStreak > 0 && overallStreak % 10 === 0) {
+                    user.unclaimedRewards.push({ xp: 100, reason: `10 Day Global Streak` });
+                } else if (overallStreak > 0 && overallStreak % 5 === 0) {
+                    user.unclaimedRewards.push({ xp: 50, reason: `5 Day Global Streak` });
+                }
+            }
+            user.overallStreak = overallStreak;
+        }
+
+        await user.save();
+
+        const authToken = generateToken({ _id: user._id, role: user.role });
+        res.header('auth-token', authToken).send({ token: authToken, user: { ...user._doc, password: '' }, xpGained });
+
+    } catch (err) {
+        console.error('GitHub Login Error:', err);
+        res.status(400).json({ message: 'GitHub Login Failed', error: err.message, details: err.response?.data });
+    }
+};
+
 exports.getMe = async (req, res) => {
     try {
         const user = await User.findById(req.user._id).select('-password');
@@ -192,54 +443,83 @@ exports.updateProfile = async (req, res) => {
     }
 };
 
+exports.getActiveRoyalPasses = async (req, res) => {
+    try {
+        const RoyalPass = require('../models/royalPass.model');
+        const passes = await RoyalPass.find({ isActive: true }).sort({ xpReward: 1 });
+        res.json(passes);
+    } catch (err) {
+        res.status(500).send(err.message || 'Error fetching royal passes');
+    }
+};
+
 exports.claimRoyalPass = async (req, res) => {
     try {
         const userId = req.user._id;
-        const user = await User.findById(userId);
+        const { passId } = req.body;
 
+        if (!passId) return res.status(400).send('Royal Pass ID is required');
+
+        const user = await User.findById(userId);
         if (!user) return res.status(404).send('User not found');
         if (user.role === 'admin') return res.status(403).send('Admins cannot claim Royal Pass');
 
-        // Check Renewal Eligibility (10 Days)
-        if (user.lastRoyalPassClaimDate) {
-            const lastClaim = new Date(user.lastRoyalPassClaimDate);
+        const RoyalPass = require('../models/royalPass.model');
+        const pass = await RoyalPass.findById(passId);
+        if (!pass || !pass.isActive) return res.status(404).send('Royal Pass not available');
+
+        // Check if already claimed and if renewable
+        const existingClaim = user.claimedRoyalPasses.find(c => c.passId.toString() === passId);
+
+        if (existingClaim) {
+            const lastClaim = new Date(existingClaim.claimDate);
             const now = new Date();
             const diffTime = Math.abs(now - lastClaim);
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
             if (diffDays < 10) {
-                return res.status(400).send(`Royal Pass is active. Renewable in ${10 - diffDays} days.`);
+                return res.status(400).send(`Pass already active. Renewable in ${10 - diffDays} days.`);
             }
-        }
-
-        // Fetch Settings
-        const settings = await Settings.getSettings();
-        const { minStreak, minSeasons, xpReward } = settings.royalPassConfig;
-
-        // Check Requirements: settings.minSeasons with streak >= settings.minStreak
-        const qualifyingStreaks = user.seasonStreaks.filter(s => s.streak >= minStreak);
-
-        if (qualifyingStreaks.length >= minSeasons) {
-
-            if (xpReward > 0) {
-                user.xp = (user.xp || 0) + xpReward;
-            }
-
-            // Update claim status
-            user.hasClaimedRoyalPass = true;
-            user.lastRoyalPassClaimDate = new Date();
-
-            await user.save();
-
-            res.json({
-                success: true,
-                message: 'Royal Pass activated successfully!',
-                xpGained: xpReward,
-                user: { ...user._doc, password: '' }
-            });
+            // If >= 10 days, we allow re-claim (extend or reset logic can be applied here)
+            // For now, we update the existing claim date
+            existingClaim.claimDate = new Date();
         } else {
-            res.status(400).send(`Requirements not met. You have ${qualifyingStreaks.length}/${minSeasons} qualifying seasons (Min Streak: ${minStreak}).`);
+            // New Claim
+            // Check Requirements
+            const minStreak = pass.minStreak;
+            const minSeasons = pass.minSeasons;
+
+            const qualifyingStreaks = user.seasonStreaks.filter(s => s.streak >= minStreak);
+
+            if (qualifyingStreaks.length < minSeasons) {
+                return res.status(400).send(`Requirements not met. You have ${qualifyingStreaks.length}/${minSeasons} qualifying seasons (Min Streak: ${minStreak}).`);
+            }
+
+            user.claimedRoyalPasses.push({
+                passId: passId,
+                claimDate: new Date()
+            });
+
+            // Legacy support (optional, can be removed if specific logic depends on it)
+            if (!user.hasClaimedRoyalPass) {
+                user.hasClaimedRoyalPass = true;
+                user.lastRoyalPassClaimDate = new Date();
+            }
         }
+
+        // Reward XP
+        if (pass.xpReward > 0) {
+            user.xp = (user.xp || 0) + pass.xpReward;
+        }
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: `Royal Pass '${pass.name}' activated!`,
+            xpGained: pass.xpReward,
+            user: { ...user._doc, password: '' }
+        });
 
     } catch (err) {
         res.status(500).send(err.message || 'Claim failed');
@@ -365,5 +645,25 @@ exports.getRoyalPassConfig = async (req, res) => {
         res.json(settings.royalPassConfig);
     } catch (err) {
         res.status(500).send(err.message || 'Error fetching config');
+    }
+};
+
+exports.uploadAvatar = async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).send('No file uploaded');
+
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+
+        // Cloudinary returns the secure_url in req.file.path
+        const fullUrl = req.file.path;
+
+        user.profilePicture = fullUrl;
+        await user.save();
+
+        res.json({ success: true, profilePicture: fullUrl });
+    } catch (err) {
+        console.error('Upload Error Details:', err);
+        res.status(500).send(err.message || 'Upload failed');
     }
 };

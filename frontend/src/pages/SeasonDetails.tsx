@@ -33,9 +33,6 @@ const SeasonDetails = () => {
     const [message, setMessage] = useState('');
     const [currentStreak, setCurrentStreak] = useState(0);
 
-    const [showLogin, setShowLogin] = useState(false);
-    const [loginEmail, setLoginEmail] = useState('');
-    const [loginPassword, setLoginPassword] = useState('');
     const [checkingIn, setCheckingIn] = useState(false);
 
     // XP Data
@@ -74,37 +71,36 @@ const SeasonDetails = () => {
         fetchSeasonDetails();
     }, [id, user]);
 
-    const handleSeasonLogin = async (e: React.FormEvent) => {
+    const handleCheckIn = async (e: React.FormEvent) => {
         e.preventDefault();
         setCheckingIn(true);
         setMessage('');
 
         try {
-            // 1. Verify credentials (re-login)
-            const loginRes = await api.post('/auth/login', { email: loginEmail, password: loginPassword });
-
-            // 2. Perform Check-in
             const res = await api.post(`/season/${id}/checkin`, {});
 
-            setMessage('Logged in successfully! Streak Updated.');
+            // Prioritize backend message
+            const serverMsg = res.data.message || 'Check-in processed.';
+            setMessage(serverMsg);
+
             if (res.data.streak) {
                 setCurrentStreak(res.data.streak);
             }
 
-            if (loginRes.data.xpGained > 0) {
-                setXpReward(loginRes.data.xpGained);
+            if (res.data.xpGained > 0) {
+                setXpReward(res.data.xpGained);
                 setShowXPPopup(true);
             }
 
-            setShowLogin(false);
-            setLoginEmail('');
-            setLoginPassword('');
+            // If successfully checked in (streak increased or just maintenance), refresh data after delay
+            setTimeout(() => {
+                fetchSeasonDetails();
+                setMessage(''); // Clear message
+            }, 3000);
 
-            // Clear message after 3s
-            setTimeout(() => setMessage(''), 3000);
         } catch (err: any) {
-            const msg = err.response?.data?.message || err.response?.data;
-            setMessage(typeof msg === 'string' ? msg : 'Login failed. Please check credentials.');
+            const msg = err.response?.data?.message || err.response?.data || 'Check-in failed.';
+            setMessage(typeof msg === 'string' ? msg : 'Check-in failed');
         } finally {
             setCheckingIn(false);
         }
@@ -191,7 +187,7 @@ const SeasonDetails = () => {
                     )}
                 </motion.div>
 
-                {/* User View: Check-in / Login */}
+                {/* User View: Check-in */}
                 {user?.role !== 'admin' && isActive && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -216,67 +212,15 @@ const SeasonDetails = () => {
                             <p className="text-slate-400">Check in daily to increase your streak and earn exclusive rewards for this season.</p>
                         </div>
 
-                        {!showLogin ? (
-                            <button
-                                onClick={() => setShowLogin(true)}
-                                className={`group relative btn-primary flex items-center justify-center gap-3 px-10 py-5 text-xl bg-gradient-to-r ${theme.styles.buttonGradient}`}
-                            >
-                                <Lock size={24} className="group-hover:scale-110 transition-transform" />
-                                <span className="font-bold">Login to Check-in</span>
-                                <div className="absolute inset-0 rounded-xl ring-2 ring-white/20 group-hover:ring-white/40 transition-all" />
-                            </button>
-                        ) : (
-                            <motion.form
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                onSubmit={handleSeasonLogin}
-                                className="w-full max-w-sm space-y-4 bg-slate-800/50 p-8 rounded-2xl border border-white/10 backdrop-blur-xl"
-                            >
-                                <h3 className="text-lg font-bold mb-6 flex items-center justify-center gap-2">
-                                    <Lock size={16} className="text-slate-400" /> Verify Credentials
-                                </h3>
-
-                                <div className="space-y-1 text-left">
-                                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Email</label>
-                                    <input
-                                        type="email"
-                                        placeholder="Confirm Email"
-                                        value={loginEmail}
-                                        onChange={(e) => setLoginEmail(e.target.value)}
-                                        className="input-field bg-slate-900/80"
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-1 text-left">
-                                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Password</label>
-                                    <input
-                                        type="password"
-                                        placeholder="Confirm Password"
-                                        value={loginPassword}
-                                        onChange={(e) => setLoginPassword(e.target.value)}
-                                        className="input-field bg-slate-900/80"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="flex gap-3 pt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowLogin(false)}
-                                        className="flex-1 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 transition-colors font-bold text-slate-300"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={checkingIn}
-                                        className={`flex-1 py-3 rounded-xl font-bold bg-gradient-to-r text-white shadow-lg ${theme.styles.buttonGradient} hover:brightness-110 transition-all`}
-                                    >
-                                        {checkingIn ? 'Verifying...' : 'Check-in'}
-                                    </button>
-                                </div>
-                            </motion.form>
-                        )}
+                        <button
+                            onClick={handleCheckIn}
+                            disabled={checkingIn}
+                            className={`group relative btn-primary flex items-center justify-center gap-3 px-10 py-5 text-xl bg-gradient-to-r ${theme.styles.buttonGradient} disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                            <Lock size={24} className="group-hover:scale-110 transition-transform" />
+                            <span className="font-bold">{checkingIn ? 'Checking In...' : 'Check In Today'}</span>
+                            <div className="absolute inset-0 rounded-xl ring-2 ring-white/20 group-hover:ring-white/40 transition-all" />
+                        </button>
                     </motion.div>
                 )}
 

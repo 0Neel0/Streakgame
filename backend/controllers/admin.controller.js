@@ -1,6 +1,8 @@
 const User = require('../models/user.model');
 const Season = require('../models/season.model');
 const Settings = require('../models/settings.model');
+const RoyalPass = require('../models/royalPass.model');
+
 
 exports.getAllUsers = async (req, res) => {
     try {
@@ -101,5 +103,58 @@ exports.updateSettings = async (req, res) => {
         res.json(settings);
     } catch (err) {
         res.status(500).send(err.message || 'Error updating settings');
+    }
+};
+
+exports.getAllRoyalPasses = async (req, res) => {
+    try {
+        const passes = await RoyalPass.find().sort({ isActive: -1, createdAt: -1 });
+        res.json(passes);
+    } catch (err) {
+        res.status(500).send(err.message || 'Error fetching royal passes');
+    }
+};
+
+exports.createRoyalPass = async (req, res) => {
+    try {
+        const { name, description, xpReward, minStreak, minSeasons, startDate, endDate } = req.body;
+        if (!name) return res.status(400).send('Name is required');
+
+        const newPass = new RoyalPass({
+            name,
+            description,
+            xpReward,
+            minStreak,
+            minSeasons,
+            startDate,
+            endDate,
+            createdBy: req.user._id
+        });
+        await newPass.save();
+        res.status(201).json(newPass);
+    } catch (err) {
+        res.status(400).send(err.message || 'Error creating royal pass');
+    }
+};
+
+exports.updateRoyalPass = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updatedPass = await RoyalPass.findByIdAndUpdate(id, req.body, { new: true });
+        if (!updatedPass) return res.status(404).send('Royal Pass not found');
+        res.json(updatedPass);
+    } catch (err) {
+        res.status(400).send(err.message || 'Error updating royal pass');
+    }
+};
+
+exports.deleteRoyalPass = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deletedPass = await RoyalPass.findByIdAndDelete(id);
+        if (!deletedPass) return res.status(404).send('Royal Pass not found');
+        res.json({ message: 'Royal Pass deleted successfully' });
+    } catch (err) {
+        res.status(400).send(err.message || 'Error deleting royal pass');
     }
 };

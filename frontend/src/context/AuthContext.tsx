@@ -15,6 +15,8 @@ interface User {
     description?: string;
     hasClaimedRoyalPass?: boolean;
     unclaimedRewards?: { xp: number; reason: string; date?: string }[];
+    friendRequests?: any[]; // Populated or ID list
+    friends?: any[];
 }
 
 interface AuthContextType {
