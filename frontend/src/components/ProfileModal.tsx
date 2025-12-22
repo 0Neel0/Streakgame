@@ -45,17 +45,17 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className="w-full max-w-lg bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-2xl relative"
+                        className="w-full max-w-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-8 rounded-2xl shadow-2xl relative"
                     >
                         <button
                             onClick={onClose}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-white bg-slate-700/50 hover:bg-slate-700 p-2 rounded-full transition-all"
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 p-2 rounded-full transition-all"
                         >
                             <X size={20} />
                         </button>
 
-                        <h2 className="text-2xl font-bold mb-6 text-white flex items-center gap-2">
-                            <User className="text-indigo-400" /> Edit Profile
+                        <h2 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white flex items-center gap-2">
+                            <User className="text-indigo-600 dark:text-indigo-400" /> Edit Profile
                         </h2>
 
                         <form onSubmit={handleSubmit} className="space-y-6">
@@ -66,7 +66,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                         {profilePicture ? (
                                             <img src={profilePicture} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-slate-500 bg-slate-800">
+                                            <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800">
                                                 <User size={48} />
                                             </div>
                                         )}
@@ -105,27 +105,27 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                         }}
                                     />
 
-                                    <div className="absolute bottom-0 right-0 bg-indigo-600 p-2 rounded-full border-4 border-slate-800 shadow-lg group-hover:bg-indigo-500 transition-colors">
+                                    <div className="absolute bottom-0 right-0 bg-indigo-600 p-2 rounded-full border-4 border-white dark:border-slate-800 shadow-lg group-hover:bg-indigo-500 transition-colors">
                                         <div className="w-4 h-4 flex items-center justify-center">
                                             <span className="text-white text-xs font-bold">+</span>
                                         </div>
                                     </div>
                                 </div>
-                                <p className="text-slate-400 text-sm mt-3 font-medium">Click to change profile picture</p>
+                                <p className="text-slate-500 dark:text-slate-400 text-sm mt-3 font-medium">Click to change profile picture</p>
                             </div>
 
                             <div className="space-y-5">
                                 <div>
-                                    <label className="text-sm font-medium text-slate-300 block mb-2 uppercase tracking-wider">Username</label>
+                                    <label className="text-sm font-medium text-slate-600 dark:text-slate-300 block mb-2 uppercase tracking-wider">Username</label>
                                     <div className="relative group">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <User className="text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={18} />
+                                            <User className="text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors" size={18} />
                                         </div>
                                         <input
                                             type="text"
                                             value={username}
                                             onChange={(e) => setUsername(e.target.value)}
-                                            className="w-full bg-slate-900/50 border border-slate-700 text-white text-sm rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 block pl-10 p-3 transition-all placeholder:text-slate-600"
+                                            className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 block pl-10 p-3 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600"
                                             placeholder="Your unique username"
                                             required
                                         />
@@ -133,15 +133,15 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium text-slate-300 block mb-2 uppercase tracking-wider">About Me</label>
+                                    <label className="text-sm font-medium text-slate-600 dark:text-slate-300 block mb-2 uppercase tracking-wider">About Me</label>
                                     <div className="relative group">
                                         <div className="absolute top-3 left-3 pointer-events-none">
-                                            <FileText className="text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={18} />
+                                            <FileText className="text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors" size={18} />
                                         </div>
                                         <textarea
                                             value={description}
                                             onChange={(e) => setDescription(e.target.value)}
-                                            className="w-full bg-slate-900/50 border border-slate-700 text-white text-sm rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 block pl-10 p-3 min-h-[120px] transition-all placeholder:text-slate-600 resize-none"
+                                            className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 block pl-10 p-3 min-h-[120px] transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 resize-none"
                                             placeholder="Write something about yourself..."
                                         />
                                     </div>

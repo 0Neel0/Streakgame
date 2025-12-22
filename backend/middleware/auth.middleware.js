@@ -1,12 +1,14 @@
-const { verifyToken } = require('../utils/jwt');
+const { verifyToken: verifyTokenUtil } = require('../utils/jwt');
 
-module.exports = function (req, res, next) {
+const verifyToken = function (req, res, next) {
     const token = req.header('auth-token');
     if (!token) return res.status(401).send('Access Denied');
 
-    const verified = verifyToken(token);
+    const verified = verifyTokenUtil(token);
     if (!verified) return res.status(400).send('Invalid Token');
 
     req.user = verified;
     next();
 };
+
+module.exports = { verifyToken };

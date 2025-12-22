@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const riskController = require('../controllers/risk.controller');
-const protect = require('../middleware/auth.middleware');
+const { verifyToken } = require('../middleware/auth.middleware');
 
-router.get('/status', protect, riskController.getRisk);
+router.get('/status', verifyToken, riskController.getRisk);
 
 module.exports = router;

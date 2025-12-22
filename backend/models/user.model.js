@@ -123,6 +123,10 @@ const UserSchema = new mongoose.Schema({
     sentFriendRequests: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
+    }],
+    clans: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Clan'
     }]
 }, { timestamps: true });
 

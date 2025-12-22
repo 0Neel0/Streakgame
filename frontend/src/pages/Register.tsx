@@ -72,7 +72,7 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-900 relative overflow-hidden">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 relative overflow-hidden transition-colors duration-300">
             {/* Background Gradients */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[100px]" />
@@ -93,10 +93,10 @@ const Register = () => {
                     >
                         <UserPlus size={32} className="text-white" />
                     </motion.div>
-                    <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-200">
+                    <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-blue-200">
                         Create Account
                     </h2>
-                    <p className="text-slate-400 mt-2">Start your streak journey today</p>
+                    <p className="text-slate-600 dark:text-slate-400 mt-2">Start your streak journey today</p>
                 </div>
 
 
@@ -164,9 +164,9 @@ const Register = () => {
                     )}
 
                     <div>
-                        <label className="block text-sm text-slate-400 mb-2">Select Role</label>
+                        <label className="block text-sm text-slate-500 dark:text-slate-400 mb-2">Select Role</label>
                         <div className="flex gap-4">
-                            <label className={`flex-1 cursor-pointer border rounded-lg p-3 text-center transition-all ${role === 'user' ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-700 text-slate-400 hover:border-slate-500'}`}>
+                            <label className={`flex-1 cursor-pointer border rounded-lg p-3 text-center transition-all ${role === 'user' ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500'}`}>
                                 <input
                                     type="radio"
                                     name="role"
@@ -177,7 +177,7 @@ const Register = () => {
                                 />
                                 User
                             </label>
-                            <label className={`flex-1 cursor-pointer border rounded-lg p-3 text-center transition-all ${role === 'admin' ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-700 text-slate-400 hover:border-slate-500'}`}>
+                            <label className={`flex-1 cursor-pointer border rounded-lg p-3 text-center transition-all ${role === 'admin' ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500'}`}>
                                 <input
                                     type="radio"
                                     name="role"
@@ -198,10 +198,10 @@ const Register = () => {
 
                     <div className="relative my-6">
                         <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-slate-700"></div>
+                            <div className="w-full border-t border-slate-300 dark:border-slate-700"></div>
                         </div>
                         <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-slate-900 text-slate-400">Or sign up with</span>
+                            <span className="px-2 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 transition-colors duration-300">Or sign up with</span>
                         </div>
                     </div>
 
@@ -209,7 +209,7 @@ const Register = () => {
                         <button
                             type="button"
                             onClick={() => googleLogin()}
-                            className="flex items-center justify-center gap-3 w-full bg-white text-slate-900 font-semibold py-3 px-6 rounded-xl hover:bg-slate-100 transition-colors shadow-lg shadow-white/10"
+                            className="flex items-center justify-center gap-3 w-full bg-white dark:bg-white text-slate-900 font-semibold py-3 px-6 rounded-xl border border-slate-200 dark:border-transparent hover:bg-slate-50 transition-colors shadow-lg shadow-black/5 dark:shadow-white/10"
                         >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path

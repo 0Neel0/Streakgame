@@ -38,6 +38,7 @@ exports.getSeasonById = async (req, res) => {
 
 exports.checkInSeason = async (req, res) => {
     const userId = req.user._id;
+    const userRole = req.user.role;
     const seasonId = req.params.id;
 
     // Support 'date' or 'lastLoginDate' from body or query
@@ -51,7 +52,80 @@ exports.checkInSeason = async (req, res) => {
     const streakService = require('../services/streak.service');
 
     try {
+        // Regular user check-in
         const result = await streakService.checkInUserToSeason(userId, seasonId, date);
+
+        // Check if user manages any clans (Squad Check-in)
+        const Clan = require('../models/clan.model');
+        const User = require('../models/user.model');
+        const Season = require('../models/season.model');
+        const notificationService = require('../services/notification.service');
+
+        // Find all clans where this user is the admin
+        const adminClans = await Clan.find({ admin: userId }).populate('members');
+
+        if (adminClans.length > 0) {
+            const io = req.app.get('io');
+            const season = await Season.findById(seasonId);
+            const adminUser = await User.findById(userId).select('username');
+
+            let totalMembersCheckedIn = 0;
+
+            // For each clan, check in all members
+            for (const clan of adminClans) {
+                // If the clan is not assigned to this season, maybe skip? 
+                // Currently clans have seasonId, but the checkIn is for a specific seasonId.
+                // Ideally we check if clan.seasonId matches, or if the feature allows cross-season checkin.
+                // For now, assuming if the admin checks in to Season X, they attract their squad to Season X.
+
+                for (const memberId of clan.members) {
+                    // Skip the admin themselves
+                    if (memberId.toString() === userId.toString()) {
+                        continue;
+                    }
+
+                    try {
+                        // Check in the member
+                        const memberResult = await streakService.checkInUserToSeason(
+                            memberId,
+                            seasonId,
+                            date,
+                            true // Flag to indicate this is a clan admin check-in
+                        );
+
+                        totalMembersCheckedIn++;
+
+                        // Send notification to the member
+                        const notification = await notificationService.createNotification(
+                            memberId,
+                            'clan_checkin',
+                            `${adminUser.username} checked into ${season.name}! Your season streak is now ${memberResult.streak}.`,
+                            {
+                                adminName: adminUser.username,
+                                seasonName: season.name,
+                                newStreak: memberResult.streak,
+                                clanName: clan.name,
+                                timestamp: new Date()
+                            }
+                        );
+
+                        // Emit real-time notification
+                        if (io) {
+                            notificationService.emitNotification(io, memberId, notification);
+                        }
+                    } catch (err) {
+                        // console.error(`Failed to check in member ${memberId}:`, err.message);
+                        // Continue with other members even if one fails
+                    }
+                }
+            }
+
+            result.clanCheckIn = {
+                clansProcessed: adminClans.length,
+                membersCheckedIn: totalMembersCheckedIn
+            };
+        }
+
         res.json(result);
     } catch (err) {
         // console.error(err); // Optional logging

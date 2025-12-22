@@ -45,6 +45,14 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Join user to their notification room (same as user room for simplicity)
+    socket.on('join_notification_room', (userId) => {
+        if (userId) {
+            socket.join(userId);
+            console.log(`User ${userId} joined notification room`);
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
     });

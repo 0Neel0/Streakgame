@@ -11,6 +11,8 @@ import ProfileModal from '../components/ProfileModal';
 import Leaderboard from '../components/Leaderboard';
 import SpinWheel from '../components/SpinWheel';
 import RiskMeter from '../components/RiskMeter';
+import NotificationBell from '../components/NotificationBell';
+import ThemeToggle from '../components/ThemeToggle';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -107,17 +109,17 @@ const RoyalPassCard: React.FC<RoyalPassCardProps> = ({ pass, user, refreshUser }
     return (
         <div className="relative group w-full">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-400 to-yellow-600 rounded-2xl blur opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-            <div className="relative glass-panel bg-slate-900 rounded-2xl p-6 md:p-8 overflow-hidden h-full flex flex-col justify-between">
+            <div className="relative glass-panel bg-white/80 dark:bg-slate-900 rounded-2xl p-6 md:p-8 overflow-hidden h-full flex flex-col justify-between transition-colors duration-300">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
 
-                <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10 w-full text-white">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10 w-full text-slate-900 dark:text-white">
                     <div className="flex items-center gap-6">
                         <div className="w-20 h-20 bg-gradient-to-br from-amber-300 to-yellow-600 rounded-2xl transform rotate-3 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
                             <Crown size={40} className="text-white fill-white/20" />
                         </div>
                         <div>
-                            <h3 className="text-2xl font-bold text-white mb-1">{pass.name}</h3>
-                            <p className="text-slate-400 max-w-xs text-sm">{pass.description || `Unlock by maintaining ${pass.minStreak}+ day streaks in ${pass.minSeasons} seasons.`}</p>
+                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{pass.name}</h3>
+                            <p className="text-slate-600 dark:text-slate-400 max-w-xs text-sm">{pass.description || `Unlock by maintaining ${pass.minStreak}+ day streaks in ${pass.minSeasons} seasons.`}</p>
                             <div className="mt-2 text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-1 rounded inline-block">
                                 Reward: {pass.xpReward} XP
                             </div>
@@ -522,7 +524,7 @@ const Dashboard: React.FC = () => {
     if (!user) return null;
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8 relative overflow-x-hidden font-sans selection:bg-indigo-500/30">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white p-4 md:p-8 relative overflow-x-hidden font-sans selection:bg-indigo-500/30 transition-colors duration-300">
             {/* <XPPopup /> removed */}
             <ProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
 
@@ -602,17 +604,17 @@ const Dashboard: React.FC = () => {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[600px] max-h-[80vh]"
+                            className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[600px] max-h-[80vh]"
                         >
                             {/* Header */}
-                            <div className="p-4 bg-slate-800/80 border-b border-slate-700 flex justify-between items-center backdrop-blur-md">
+                            <div className="p-4 bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center backdrop-blur-md">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-slate-700 overflow-hidden">
                                         {chatFriend.profilePicture ? <img src={chatFriend.profilePicture} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center w-full h-full"><User size={16} /></div>}
                                     </div>
                                     <div>
-                                        <div className="font-bold text-white leading-tight">{chatFriend.username}</div>
-                                        <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                                        <div className="font-bold text-slate-900 dark:text-white leading-tight">{chatFriend.username}</div>
+                                        <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                             {isChatLoading ? 'Connecting...' : 'Online'}
                                         </div>
                                     </div>
@@ -623,7 +625,7 @@ const Dashboard: React.FC = () => {
                             </div>
 
                             {/* Messages Area */}
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-900/50 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-900/50 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent">
                                 {messages.length === 0 && !isChatLoading && (
                                     <div className="text-center text-slate-500 py-10 text-xs">Start the conversation! 👋</div>
                                 )}
@@ -647,13 +649,13 @@ const Dashboard: React.FC = () => {
                             </div>
 
                             {/* Input Area */}
-                            <form onSubmit={handleSendMessage} className="p-4 bg-slate-800/50 border-t border-slate-700 flex gap-2">
+                            <form onSubmit={handleSendMessage} className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex gap-2">
                                 <input
                                     type="text"
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     placeholder="Type a message..."
-                                    className="flex-1 bg-slate-950/50 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500/50 transition-colors placeholder:text-slate-600"
+                                    className="flex-1 bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500/50 transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-600"
                                     autoFocus
                                 />
                                 <button
@@ -677,10 +679,10 @@ const Dashboard: React.FC = () => {
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+                            className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
                         >
                             {/* Header */}
-                            <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
+                            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/80 dark:bg-slate-800/50">
                                 <h2 className="text-2xl font-bold flex items-center gap-2">
                                     <div className="bg-indigo-500/20 p-2 rounded-xl">
                                         <UserCheck className="text-indigo-400" size={24} />
@@ -889,7 +891,7 @@ const Dashboard: React.FC = () => {
                 className="relative z-10 max-w-7xl mx-auto space-y-8"
             >
                 {/* Navbar */}
-                <motion.nav variants={itemVariants} className="glass-panel p-4 rounded-2xl flex flex-wrap gap-4 justify-between items-center sticky top-4 z-50 backdrop-blur-xl bg-slate-900/60 border-white/10">
+                <motion.nav variants={itemVariants} className="glass-panel p-4 rounded-2xl flex flex-wrap gap-4 justify-between items-center sticky top-4 z-50 backdrop-blur-xl bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none transition-all duration-300">
                     <div className="flex items-center gap-3">
                         <div className="bg-gradient-to-tr from-orange-500 to-red-600 p-2 rounded-xl shadow-lg shadow-orange-500/20">
                             <Flame className="text-white fill-white" size={24} />
@@ -930,6 +932,21 @@ const Dashboard: React.FC = () => {
                                     )}
                                 </button>
                             )}
+
+                            {/* Theme Toggle */}
+                            <ThemeToggle />
+
+                            {/* Notification Bell */}
+                            <NotificationBell token={localStorage.getItem('auth-token')} />
+
+                            {/* Clans Button */}
+                            <button
+                                onClick={() => navigate('/clans')}
+                                className="p-2.5 text-slate-400 hover:text-white transition-colors rounded-xl hover:bg-white/5"
+                                title="Clans"
+                            >
+                                <Users size={20} />
+                            </button>
 
                             {user.role !== 'admin' && (
                                 <div className="flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/20 px-4 py-2 rounded-xl shadow-[0_0_15px_-3px_rgba(234,179,8,0.2)]">
@@ -985,10 +1002,10 @@ const Dashboard: React.FC = () => {
                         {/* Welcome Header */}
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                             <div>
-                                <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-2 tracking-tight">
+                                <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">
                                     Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">{user.username}</span>
                                 </h2>
-                                <p className="text-slate-400 text-lg">Ready to keep your streak alive?</p>
+                                <p className="text-slate-600 dark:text-slate-400 text-lg">Ready to keep your streak alive?</p>
                             </div>
 
                             {/* Quick Action / Overall Streak for User */}

@@ -61,7 +61,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-900 relative overflow-hidden">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 relative overflow-hidden transition-colors duration-300">
             {/* Background Gradients */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
                 <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-600/20 rounded-full blur-[100px]" />
@@ -82,10 +82,10 @@ const Login = () => {
                     >
                         <Flame size={32} className="text-white" />
                     </motion.div>
-                    <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-orange-200">
+                    <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-orange-200">
                         Welcome Back
                     </h2>
-                    <p className="text-slate-400 mt-2">Keep your streak alive!</p>
+                    <p className="text-slate-600 dark:text-slate-400 mt-2">Keep your streak alive!</p>
                 </div>
 
 
@@ -134,10 +134,10 @@ const Login = () => {
 
                     <div className="relative my-6">
                         <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-slate-700"></div>
+                            <div className="w-full border-t border-slate-300 dark:border-slate-700"></div>
                         </div>
                         <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-slate-900 text-slate-400">Or continue with</span>
+                            <span className="px-2 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 transition-colors duration-300">Or continue with</span>
                         </div>
                     </div>
 
@@ -145,7 +145,7 @@ const Login = () => {
                         <button
                             type="button"
                             onClick={() => googleLogin()}
-                            className="flex items-center justify-center gap-3 w-full bg-white text-slate-900 font-semibold py-3 px-6 rounded-xl hover:bg-slate-100 transition-colors shadow-lg shadow-white/10"
+                            className="flex items-center justify-center gap-3 w-full bg-white dark:bg-white text-slate-900 font-semibold py-3 px-6 rounded-xl border border-slate-200 dark:border-transparent hover:bg-slate-50 transition-colors shadow-lg shadow-black/5 dark:shadow-white/10"
                         >
                             <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path

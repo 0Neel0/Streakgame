@@ -13,6 +13,8 @@ router.use('/friends', friendsRoutes);
 router.use('/chat', require('./chat.route'));
 router.use('/groups', require('./group.route'));
 router.use('/risk', require('./risk.route'));
+router.use('/clan', require('./clan.route'));
+router.use('/notifications', require('./notification.route'));
 
 
 module.exports = router;
