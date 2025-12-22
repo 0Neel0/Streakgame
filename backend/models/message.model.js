@@ -9,11 +9,25 @@ const messageSchema = new mongoose.Schema({
     recipient: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: false
+    },
+    group: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Group',
+        required: false
     },
     content: {
         type: String,
-        required: true
+        required: false
+    },
+    fileUrl: {
+        type: String,
+        default: ''
+    },
+    fileType: {
+        type: String,
+        enum: ['image', 'video', 'document', 'none'],
+        default: 'none'
     },
     read: {
         type: Boolean,

@@ -4,7 +4,9 @@ const verifyToken = require('../middleware/auth.middleware');
 
 router.use(verifyToken);
 
-router.post('/send', chatController.sendMessage);
+const upload = require('../middleware/upload.middleware');
+
+router.post('/send', upload.single('file'), chatController.sendMessage);
 router.get('/history/:friendId', chatController.getMessages);
 router.post('/read', chatController.markAsRead);
 router.get('/unread', chatController.getFunctioningUnreadCounts);

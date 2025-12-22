@@ -6,8 +6,23 @@ exports.sendMessage = async (req, res) => {
         const { recipientId, content } = req.body;
         const senderId = req.user._id;
 
-        if (!recipientId || !content) {
-            return res.status(400).send("Recipient and content are required");
+        const file = req.file;
+        let fileUrl = '';
+        let fileType = 'none';
+
+        if (file) {
+            fileUrl = `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
+            if (file.mimetype.startsWith('image/')) {
+                fileType = 'image';
+            } else if (file.mimetype.startsWith('video/')) {
+                fileType = 'video';
+            } else {
+                fileType = 'document';
+            }
+        }
+
+        if (!recipientId || (!content && !file)) {
+            return res.status(400).send("Recipient and content (or file) are required");
         }
 
         // Verify recipient exists and is a friend (optional strictness, but good for privacy)
@@ -17,13 +32,21 @@ exports.sendMessage = async (req, res) => {
         const newMessage = new Message({
             sender: senderId,
             recipient: recipientId,
-            content
+            content: content || '',
+            fileUrl,
+            fileType
         });
 
         await newMessage.save();
 
         // Populate sender details for immediate frontend display if needed
         await newMessage.populate('sender', 'username profilePicture');
+
+        // Socket.io: Emit message to recipient
+        const io = req.app.get('io');
+        if (io) {
+            io.to(recipientId).emit('new_message', newMessage);
+        }
 
         res.json(newMessage);
 

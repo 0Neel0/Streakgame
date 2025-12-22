@@ -11,5 +11,8 @@ router.use('/admin', adminRoutes);
 router.use('/season', seasonRoutes);
 router.use('/friends', friendsRoutes);
 router.use('/chat', require('./chat.route'));
+router.use('/groups', require('./group.route'));
+router.use('/risk', require('./risk.route'));
+
 
 module.exports = router;

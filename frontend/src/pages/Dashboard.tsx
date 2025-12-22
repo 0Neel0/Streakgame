@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { Flame, Calendar, Trophy, LogOut, Lock, X, Shield, User, UserCheck, Crown, ArrowRight, Zap, Star, Clock, Search, Gift, MessageSquare, Send } from 'lucide-react';
+import { Flame, Calendar, Trophy, LogOut, X, Shield, User, UserCheck, Crown, ArrowRight, Zap, Star, Clock, Search, Gift, MessageSquare, Send, Users } from 'lucide-react';
 import { AnimatePresence, motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { getSeasonTheme } from '../utils/theme';
 import toast from 'react-hot-toast';
@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import ProfileModal from '../components/ProfileModal';
 import Leaderboard from '../components/Leaderboard';
 import SpinWheel from '../components/SpinWheel';
+import RiskMeter from '../components/RiskMeter';
 
 const containerVariants = {
     hidden: { opacity: 0 },
@@ -216,6 +217,7 @@ const Dashboard: React.FC = () => {
     const [newMessage, setNewMessage] = useState('');
     const [isChatLoading, setIsChatLoading] = useState(false);
     const [unreadCounts, setUnreadCounts] = useState<{ [key: string]: number }>({});
+    const [riskAnalysis, setRiskAnalysis] = useState<any>(null);
 
     // Poll for unread counts globally
     useEffect(() => {
@@ -260,8 +262,20 @@ const Dashboard: React.FC = () => {
             }
         };
 
+        const fetchRisk = async () => {
+            if (user?.role !== 'admin') {
+                try {
+                    const res = await api.get('/risk/status');
+                    setRiskAnalysis(res.data);
+                } catch (err) {
+                    console.error("Risk fetch failed", err);
+                }
+            }
+        };
+
         fetchSeasons();
         fetchRoyalPasses();
+        fetchRisk();
     }, [user?.role]);
 
     const handleLogout = () => {
@@ -994,6 +1008,21 @@ const Dashboard: React.FC = () => {
                             )}
                         </div>
 
+                        {/* Risk Meter Section */}
+                        {user.role !== 'admin' && riskAnalysis && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                            >
+                                <RiskMeter
+                                    score={riskAnalysis.score}
+                                    level={riskAnalysis.level}
+                                    factors={riskAnalysis.factors}
+                                />
+                            </motion.div>
+                        )}
+
                         {/* Pending Rewards Alert */}
                         <AnimatePresence>
                             {user.unclaimedRewards && user.unclaimedRewards.length > 0 && (
@@ -1153,6 +1182,22 @@ const Dashboard: React.FC = () => {
 
                     {/* Right Column (Sidebar) */}
                     <motion.div variants={itemVariants} className="hidden lg:block lg:col-span-1 space-y-8 h-fit sticky top-24">
+                        <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-3xl p-6 relative overflow-hidden shadow-xl shadow-indigo-500/20 group cursor-pointer" onClick={() => navigate('/chat')}>
+                            <div className="absolute top-0 right-0 p-4 opacity-20 transform rotate-12 group-hover:rotate-0 transition-all duration-500">
+                                <MessageSquare size={80} className="text-white fill-white/20" />
+                            </div>
+                            <div className="relative z-10 text-white">
+                                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-sm border border-white/10 group-hover:scale-110 transition-transform">
+                                    <Users size={24} />
+                                </div>
+                                <h3 className="text-2xl font-bold mb-1">Group Chat</h3>
+                                <p className="text-indigo-100 text-sm mb-4 max-w-[80%]">Connect with your squad and plan your next streak!</p>
+                                <button className="bg-white text-indigo-600 px-4 py-2 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 group-hover:gap-3 transition-all">
+                                    Open Chat <ArrowRight size={16} />
+                                </button>
+                            </div>
+                        </div>
+
                         <Leaderboard />
                         {user?.role !== 'admin' && <SpinWheel />}
 
