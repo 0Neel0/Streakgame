@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Users, Copy, Calendar, Trophy, UserMinus, Crown, Edit, Megaphone, X, Check, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Users, Copy, Calendar, Trophy, UserMinus, Crown, Edit, Megaphone, X, Check, AlertTriangle, UserPlus, Search, MessageCircle, Send, Gift } from 'lucide-react';
+import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -58,6 +59,22 @@ const ClanDetails: React.FC = () => {
     const [broadcastMessage, setBroadcastMessage] = useState('');
     const [activeSeasons, setActiveSeasons] = useState<any[]>([]);
 
+    // Invite State
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [friends, setFriends] = useState<any[]>([]);
+    const [inviteSearch, setInviteSearch] = useState('');
+
+    // Chat State
+    const [activeTab, setActiveTab] = useState<'members' | 'chat'>('members');
+    const [messages, setMessages] = useState<any[]>([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [socket, setSocket] = useState<any>(null);
+
+    // XP Transfer State
+    const [isXPModalOpen, setIsXPModalOpen] = useState(false);
+    const [xpTargetUser, setXpTargetUser] = useState<Member | null>(null);
+    const [xpAmount, setXpAmount] = useState('');
+
     const token = localStorage.getItem('auth-token');
 
     // Retrieval of userId from user-data if not explicitly set
@@ -73,9 +90,67 @@ const ClanDetails: React.FC = () => {
     } catch (e) { console.error('Error parsing user data', e); }
 
     useEffect(() => {
+        // Socket Connection
+        const newSocket = io(API_URL.replace('/api', '')); // Assuming socket is at root
+        setSocket(newSocket);
+
+        return () => {
+            newSocket.disconnect();
+        };
+    }, []);
+
+    useEffect(() => {
         fetchClanDetails();
         fetchActiveSeasons();
+        fetchFriends();
+        if (activeTab === 'chat') {
+            fetchMessages();
+        }
+    }, [id, activeTab]);
+
+    useEffect(() => {
+        if (socket && id) {
+            socket.emit('join_room', `clan_${id}`);
+
+            socket.on('new_clan_message', (msg: any) => {
+                if (msg.clan === id) {
+                    setMessages(prev => [...prev, msg]);
+                }
+            });
+
+            return () => {
+                socket.off('new_clan_message');
+            };
+        }
+    }, [socket, id]);
+
+    const fetchMessages = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/clan/${id}/messages`, {
+                headers: { 'auth-token': token }
+            });
+            setMessages(response.data);
+        } catch (err) {
+            console.error('Error fetching messages:', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchClanDetails();
+        fetchActiveSeasons();
+        fetchFriends();
     }, [id]);
+
+    const fetchFriends = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/friends/list`, {
+                headers: { 'auth-token': token }
+            });
+            setFriends(response.data);
+        } catch (err) {
+            console.error('Error fetching friends:', err);
+        }
+    };
 
     const fetchActiveSeasons = async () => {
         try {
@@ -135,6 +210,55 @@ const ClanDetails: React.FC = () => {
             fetchClanDetails();
         } catch (err: any) {
             toast.error(err.response?.data || 'Failed to update clan');
+        }
+    };
+
+    const handleInviteFriend = async (friendId: string) => {
+        try {
+            await axios.post(`${API_URL}/clan/${id}/invite`, { targetUserId: friendId }, {
+                headers: { 'auth-token': token }
+            });
+            toast.success('Invitation sent!');
+            // Update local state to hide invite button for this user if we want, or just toast
+        } catch (err: any) {
+            toast.error(err.response?.data || 'Failed to invite friend');
+        }
+    };
+
+    const handleSendMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newMessage.trim()) return;
+
+        try {
+            await axios.post(`${API_URL}/clan/${id}/messages`, { content: newMessage }, {
+                headers: { 'auth-token': token }
+            });
+            setNewMessage('');
+            // Message will be added via socket
+        } catch (err: any) {
+            toast.error('Failed to send message');
+        }
+    };
+
+    const handleTransferXP = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!xpTargetUser || !xpAmount) return;
+
+        try {
+            const response = await axios.post(`${API_URL}/clan/${id}/transfer-xp`, {
+                targetUserId: xpTargetUser._id,
+                amount: parseInt(xpAmount)
+            }, {
+                headers: { 'auth-token': token }
+            });
+            toast.success(response.data.message);
+            setIsXPModalOpen(false);
+            setXpAmount('');
+            setXpTargetUser(null);
+            // Refresh clan details to update XP balance if needed, though strictly we might want to update local state optimistically
+            fetchClanDetails();
+        } catch (err: any) {
+            toast.error(err.response?.data || 'Failed to transfer XP');
         }
     };
 
@@ -226,7 +350,7 @@ const ClanDetails: React.FC = () => {
                     className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-md rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden mb-8 shadow-2xl transition-all"
                 >
                     {/* Hero Header */}
-                    <div className="relative h-48 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/50 dark:to-indigo-900/50 p-8 flex flex-col justify-end overflow-hidden group">
+                    <div className="relative h-48 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/40 dark:to-indigo-900/40 p-8 flex flex-col justify-end overflow-hidden group">
                         <div>
                             <div>
                                 <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-3">
@@ -242,7 +366,17 @@ const ClanDetails: React.FC = () => {
                             </div>
 
                             {isAdmin && (
-                                <div className="flex gap-2 relative z-50">
+                                <div className="flex flex-wrap gap-2 relative z-50 mt-4 md:absolute md:bottom-8 md:right-8">
+                                    <button
+                                        onClick={() => setIsInviteModalOpen(true)}
+                                        className="p-3 bg-indigo-500 hover:bg-indigo-600 hover:scale-105 active:scale-95 text-white rounded-xl backdrop-blur-md transition-all shadow-lg shadow-indigo-500/20"
+                                        title="Invite Friends"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <UserPlus size={20} />
+                                            <span className="hidden lg:inline text-sm font-bold">Invite</span>
+                                        </div>
+                                    </button>
                                     {((clan.seasonId && clan.seasonId._id) || (clan.activeSeasons && clan.activeSeasons.length > 0)) ? (
                                         <button
                                             onClick={handleSquadCheckIn}
@@ -286,8 +420,8 @@ const ClanDetails: React.FC = () => {
                     </div>
 
                     {/* Stats Bar */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-slate-200 dark:bg-slate-800">
-                        <div className="bg-slate-50 dark:bg-slate-900/80 p-6 flex items-center gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-slate-100 dark:bg-slate-800">
+                        <div className="bg-white dark:bg-slate-900/80 p-6 flex items-center gap-4">
                             <div className="w-10 h-10 bg-purple-500/10 dark:bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-600 dark:text-purple-400">
                                 <Users size={20} />
                             </div>
@@ -296,7 +430,7 @@ const ClanDetails: React.FC = () => {
                                 <p className="text-xl font-bold text-slate-900 dark:text-white">{clan.members.length}</p>
                             </div>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-900/80 p-6 flex items-center gap-4">
+                        <div className="bg-white dark:bg-slate-900/80 p-6 flex items-center gap-4">
                             <div className="w-10 h-10 bg-blue-500/10 dark:bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400">
                                 <Calendar size={20} />
                             </div>
@@ -305,7 +439,7 @@ const ClanDetails: React.FC = () => {
                                 <p className="text-xl font-bold text-slate-900 dark:text-white">{new Date(clan.createdAt).toLocaleDateString()}</p>
                             </div>
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-900/80 p-6 flex items-center gap-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors group"
+                        <div className="bg-white dark:bg-slate-900/80 p-6 flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors group"
                             onClick={() => copyToClipboard(clan._id)}>
                             <div className="w-10 h-10 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                                 <Copy size={20} />
@@ -333,87 +467,289 @@ const ClanDetails: React.FC = () => {
                     )}
                 </motion.div>
 
+                {/* Tab Navigation */}
+                <div className="flex gap-4 mb-6 border-b border-slate-200 dark:border-slate-800 pb-1">
+                    <button
+                        onClick={() => setActiveTab('members')}
+                        className={`pb-3 px-2 text-sm font-bold transition-all relative ${activeTab === 'members' ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                    >
+                        MEMBERS
+                        {activeTab === 'members' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-500" />}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('chat')}
+                        className={`pb-3 px-2 text-sm font-bold transition-all relative ${activeTab === 'chat' ? 'text-indigo-500' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                    >
+                        CLAN CHAT
+                        {activeTab === 'chat' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-500" />}
+                    </button>
+                </div>
+
                 {/* Members List */}
-                <div className="space-y-4">
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                        <Users className="text-purple-600 dark:text-purple-400" />
-                        Clan Members
-                    </h2>
+                {activeTab === 'members' && (
+                    <div className="space-y-4">
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                            <Users className="text-purple-600 dark:text-purple-400" />
+                            Clan Members
+                        </h2>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {clan.members.map((member, index) => (
-                            <motion.div
-                                key={member._id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                                className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-sm border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center justify-between group hover:border-purple-300 dark:hover:border-slate-700 transition-colors shadow-sm"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="relative">
-                                        {member.profilePicture ? (
-                                            <img
-                                                src={member.profilePicture}
-                                                alt={member.username}
-                                                className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800"
-                                            />
-                                        ) : (
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-lg font-bold ring-2 ring-slate-100 dark:ring-slate-800 text-white">
-                                                {member.username[0].toUpperCase()}
-                                            </div>
-                                        )}
-                                        {member._id === clan.admin._id && (
-                                            <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-0.5 border border-white dark:border-slate-900 shadow-lg" title="Admin">
-                                                <Crown size={12} className="text-slate-900" />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <p className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                            {member.username}
-                                            {member._id === clan.admin._id && (
-                                                <span className="text-[10px] bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-1.5 rounded uppercase font-bold tracking-wider border border-yellow-500/20 hidden sm:inline-block">Admin</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {clan.members.map((member, index) => (
+                                <motion.div
+                                    key={member._id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    className="bg-white dark:bg-slate-900/40 backdrop-blur-sm border border-slate-100 dark:border-slate-800 p-4 rounded-xl flex items-center justify-between group hover:border-purple-300 dark:hover:border-slate-700 transition-all shadow-sm hover:shadow-md"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className="relative">
+                                            {member.profilePicture ? (
+                                                <img
+                                                    src={member.profilePicture}
+                                                    alt={member.username}
+                                                    className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800"
+                                                />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-lg font-bold ring-2 ring-slate-100 dark:ring-slate-800 text-white">
+                                                    {member.username[0].toUpperCase()}
+                                                </div>
                                             )}
-                                        </p>
-                                        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                            <span className="flex items-center gap-1">
-                                                <Trophy size={12} className="text-purple-500 dark:text-purple-400" />
-                                                {member.xp || 0} XP
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
-                                                {member.overallStreak || 0} Streak
-                                            </span>
+                                            {member._id === clan.admin._id && (
+                                                <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-0.5 border border-white dark:border-slate-900 shadow-lg" title="Admin">
+                                                    <Crown size={12} className="text-slate-900" />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <p className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                                {member.username}
+                                                {member._id === clan.admin._id && (
+                                                    <span className="text-[10px] bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 px-1.5 rounded uppercase font-bold tracking-wider border border-yellow-500/20 hidden sm:inline-block">Admin</span>
+                                                )}
+                                            </p>
+                                            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                                <span className="flex items-center gap-1">
+                                                    <Trophy size={12} className="text-purple-500 dark:text-purple-400" />
+                                                    {member.xp || 0} XP
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+                                                    {member.overallStreak || 0} Streak
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="flex items-center gap-2">
-                                    {isAdmin && member._id !== clan.admin._id && (
-                                        <>
-                                            <button
-                                                onClick={() => handleTransferOwnership(member._id, member.username)}
-                                                className="p-2 text-slate-500 hover:text-yellow-400 hover:bg-yellow-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                                title="Transfer Ownership"
-                                            >
-                                                <Crown size={18} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleRemoveMember(member._id, member.username)}
-                                                className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                                title="Remove Member"
-                                            >
-                                                <UserMinus size={18} />
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            </motion.div>
-                        ))}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setXpTargetUser(member);
+                                                setIsXPModalOpen(true);
+                                            }}
+                                            className="p-2 text-slate-500 hover:text-indigo-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors group-hover:opacity-100 opacity-100" // Always show or use group-hover
+                                            title="Send XP"
+                                        >
+                                            <Gift size={18} />
+                                        </button>
+                                        {isAdmin && member._id !== clan.admin._id && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleTransferOwnership(member._id, member.username)}
+                                                    className="p-2 text-slate-500 hover:text-yellow-400 hover:bg-yellow-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                                    title="Transfer Ownership"
+                                                >
+                                                    <Crown size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRemoveMember(member._id, member.username)}
+                                                    className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                                    title="Remove Member"
+                                                >
+                                                    <UserMinus size={18} />
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
                     </div>
-                </div>
+                )}
+
+
+                {/* Chat Area */}
+                {activeTab === 'chat' && (
+                    <div className="flex flex-col bg-gradient-to-b from-white to-slate-50 dark:from-slate-900/60 dark:to-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xl" style={{ height: '650px' }}>
+                        {/* Chat Header */}
+                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 flex items-center gap-3 shadow-lg">
+                            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                                <MessageCircle size={20} className="text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-bold text-white text-lg">Clan Chat</h3>
+                                <p className="text-xs text-white/70">{clan.members.length} members</p>
+                            </div>
+                        </div>
+
+                        {/* Messages Area */}
+                        <div
+                            className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50 dark:bg-slate-950/30"
+                            style={{
+                                scrollbarWidth: 'thin',
+                                scrollbarColor: '#6366f1 transparent'
+                            }}
+                            ref={(el) => {
+                                if (el && messages.length > 0) {
+                                    el.scrollTop = el.scrollHeight;
+                                }
+                            }}
+                        >
+                            {messages.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center">
+                                    <motion.div
+                                        initial={{ scale: 0.8, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        className="text-center"
+                                    >
+                                        <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full flex items-center justify-center">
+                                            <MessageCircle size={40} className="text-indigo-500 dark:text-indigo-400" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">No messages yet</h3>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Start the conversation with your clan!</p>
+                                    </motion.div>
+                                </div>
+                            ) : (
+                                messages.map((msg, idx) => {
+                                    const isMe = msg.sender?._id === userId;
+                                    const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                                    const showAvatar = !prevMsg || prevMsg.sender?._id !== msg.sender?._id;
+
+                                    return (
+                                        <motion.div
+                                            key={idx}
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                            className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${!showAvatar ? 'mt-1' : 'mt-4'}`}
+                                        >
+                                            <div className={`flex items-end gap-2 max-w-[75%] ${isMe ? 'flex-row-reverse' : ''}`}>
+                                                {/* Avatar */}
+                                                <div className={`w-8 h-8 flex-shrink-0 ${showAvatar ? 'opacity-100' : 'opacity-0'}`}>
+                                                    {msg.sender?.profilePicture ? (
+                                                        <img
+                                                            src={msg.sender.profilePicture}
+                                                            alt={msg.sender.username}
+                                                            className="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-slate-800 shadow-md"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white dark:ring-slate-800 shadow-md">
+                                                            {msg.sender?.username?.[0]?.toUpperCase() || '?'}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Message Bubble */}
+                                                <div className={`relative group`}>
+                                                    {showAvatar && !isMe && (
+                                                        <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 ml-2">
+                                                            {msg.sender?.username}
+                                                        </p>
+                                                    )}
+                                                    <div className={`px-4 py-3 rounded-2xl shadow-md transition-all hover:shadow-lg ${isMe
+                                                            ? 'bg-gradient-to-br from-indigo-600 to-indigo-500 text-white rounded-br-md'
+                                                            : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-md border border-slate-200 dark:border-slate-700'
+                                                        }`}>
+                                                        <p className="text-sm leading-relaxed break-words">{msg.content}</p>
+                                                        <div className="flex items-center gap-1 mt-1">
+                                                            <p className={`text-[10px] ${isMe ? 'text-white/60' : 'text-slate-400 dark:text-slate-500'}`}>
+                                                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        {/* Input Area */}
+                        <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 backdrop-blur-sm">
+                            <div className="flex gap-2 items-center">
+                                <div className="flex-1 relative">
+                                    <input
+                                        type="text"
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        placeholder="Type your message..."
+                                        className="w-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 border-2 border-transparent focus:border-indigo-500 rounded-2xl px-5 py-3.5 outline-none transition-all shadow-inner"
+                                    />
+                                </div>
+                                <motion.button
+                                    type="submit"
+                                    disabled={!newMessage.trim()}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className="p-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-300 disabled:to-slate-300 dark:disabled:from-slate-700 dark:disabled:to-slate-700 text-white rounded-2xl transition-all shadow-lg disabled:shadow-none disabled:cursor-not-allowed"
+                                >
+                                    <Send size={20} />
+                                </motion.button>
+                            </div>
+                        </form>
+                    </div>
+                )}
             </div>
+
+            {/* XP Transfer Modal */}
+            <AnimatePresence>
+                {isXPModalOpen && xpTargetUser && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800"
+                        >
+                            <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500 mb-4">
+                                Send XP to {xpTargetUser.username}
+                            </h3>
+                            <form onSubmit={handleTransferXP}>
+                                <div className="mb-4">
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">Amount</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        placeholder="Enter amount (e.g. 50)"
+                                        value={xpAmount}
+                                        onChange={(e) => setXpAmount(e.target.value)}
+                                        className="w-full bg-slate-100 dark:bg-slate-800 px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500"
+                                        required
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsXPModalOpen(false)}
+                                        className="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-bold rounded-xl transition-colors"
+                                    >
+                                        Send XP
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
 
             {/* Edit Modal */}
             <AnimatePresence>
@@ -632,6 +968,74 @@ const ClanDetails: React.FC = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Invite Modal */}
+            <AnimatePresence>
+                {isInviteModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800"
+                        >
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-500">Invite Friends</h3>
+                                <button onClick={() => setIsInviteModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400">
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="relative mb-4">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Search friends..."
+                                    value={inviteSearch}
+                                    onChange={(e) => setInviteSearch(e.target.value)}
+                                    className="w-full bg-slate-100 dark:bg-slate-800 pl-10 pr-4 py-3 rounded-xl border border-transparent focus:border-indigo-500 outline-none text-slate-900 dark:text-white transition-all"
+                                />
+                            </div>
+
+                            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                {friends
+                                    .filter(f => !clan.members.find((m: any) => m._id === f._id))
+                                    .filter(f => f.username.toLowerCase().includes(inviteSearch.toLowerCase()))
+                                    .length === 0 ? (
+                                    <div className="text-center text-slate-500 py-8">
+                                        No friends found to invite.
+                                    </div>
+                                ) : (
+                                    friends
+                                        .filter(f => !clan.members.find((m: any) => m._id === f._id))
+                                        .filter(f => f.username.toLowerCase().includes(inviteSearch.toLowerCase()))
+                                        .map(friend => (
+                                            <div key={friend._id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
+                                                        {friend.profilePicture ? (
+                                                            <img src={friend.profilePicture} alt={friend.username} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <span className="text-xs font-bold">{friend.username[0]}</span>
+                                                        )}
+                                                    </div>
+                                                    <span className="font-bold text-slate-700 dark:text-slate-200">{friend.username}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleInviteFriend(friend._id)}
+                                                    className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold rounded-lg transition-colors"
+                                                >
+                                                    Invite
+                                                </button>
+                                            </div>
+                                        ))
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
         </div>
     );
 };

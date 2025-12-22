@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { Flame, Calendar, Trophy, LogOut, X, Shield, User, UserCheck, Crown, ArrowRight, Zap, Star, Clock, Search, Gift, MessageSquare, Send, Users } from 'lucide-react';
+import { Flame, Calendar, Trophy, LogOut, X, Shield, User, UserCheck, Crown, ArrowRight, Zap, Star, Clock, Search, Gift, MessageSquare, Send, Users, BarChart3, Target } from 'lucide-react';
 import { AnimatePresence, motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { getSeasonTheme } from '../utils/theme';
 import toast from 'react-hot-toast';
@@ -14,29 +14,6 @@ import RiskMeter from '../components/RiskMeter';
 import NotificationBell from '../components/NotificationBell';
 import ThemeToggle from '../components/ThemeToggle';
 
-const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.1,
-            delayChildren: 0.1
-        }
-    }
-};
-
-const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-        y: 0,
-        opacity: 1,
-        transition: {
-            type: "spring" as const,
-            stiffness: 100,
-            damping: 15
-        }
-    }
-};
 
 interface RoyalPassCardProps {
     pass: any;
@@ -108,8 +85,8 @@ const RoyalPassCard: React.FC<RoyalPassCardProps> = ({ pass, user, refreshUser }
 
     return (
         <div className="relative group w-full">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-400 to-yellow-600 rounded-2xl blur opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-            <div className="relative glass-panel bg-white/80 dark:bg-slate-900 rounded-2xl p-6 md:p-8 overflow-hidden h-full flex flex-col justify-between transition-colors duration-300">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-400 to-yellow-600 rounded-2xl blur opacity-20 dark:opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+            <div className="relative glass-panel bg-white/90 dark:bg-slate-900 rounded-2xl p-6 md:p-8 overflow-hidden h-full flex flex-col justify-between transition-colors duration-300 shadow-xl shadow-amber-500/5 dark:shadow-none">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
 
                 <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10 w-full text-slate-900 dark:text-white">
@@ -149,11 +126,11 @@ const RoyalPassCard: React.FC<RoyalPassCardProps> = ({ pass, user, refreshUser }
                             {isClaimed ? 'Renew Pass' : 'Claim Pass'}
                         </button>
                     ) : (
-                        <div className="text-center bg-slate-800/50 p-4 rounded-xl border border-white/5 min-w-[140px]">
-                            <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Progress</div>
+                        <div className="text-center bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-white/5 min-w-[140px]">
+                            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Progress</div>
                             <div className="flex items-baseline justify-center gap-1">
-                                <span className="text-3xl font-black text-white">{qualifyingSeasons}</span>
-                                <span className="text-sm text-slate-500 font-bold">/ {pass.minSeasons}</span>
+                                <span className="text-3xl font-black text-slate-900 dark:text-white">{qualifyingSeasons}</span>
+                                <span className="text-sm text-slate-400 dark:text-slate-500 font-bold">/ {pass.minSeasons}</span>
                             </div>
                             <div className="text-[10px] text-slate-500 mt-1">
                                 Needs {pass.minStreak} day streaks
@@ -524,56 +501,56 @@ const Dashboard: React.FC = () => {
     if (!user) return null;
 
     return (
-        <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white p-4 md:p-8 relative overflow-x-hidden font-sans selection:bg-indigo-500/30 transition-colors duration-300">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white p-4 md:p-8 relative overflow-x-hidden font-sans selection:bg-indigo-500/30 transition-colors duration-300">
             {/* <XPPopup /> removed */}
             <ProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
 
             {/* XP Transfer Modal */}
             <AnimatePresence>
                 {showTransferModal && transferTarget && (
-                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="w-full max-w-sm bg-slate-900 border border-slate-700 p-6 rounded-3xl shadow-2xl relative overflow-hidden"
+                            className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-6 rounded-3xl shadow-2xl relative overflow-hidden"
                         >
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
                             <button
                                 onClick={() => setShowTransferModal(false)}
-                                className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full"
+                                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-full"
                             >
                                 <X size={20} />
                             </button>
 
                             <div className="text-center mb-6 mt-2">
                                 <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-4 bg-indigo-500/10">
-                                    <Gift size={28} className="text-indigo-400" />
+                                    <Gift size={28} className="text-indigo-500 dark:text-indigo-400" />
                                 </div>
-                                <h2 className="text-xl font-bold text-white mb-1">Gift XP</h2>
-                                <p className="text-slate-400 text-xs">
-                                    Send XP to <span className="text-white font-bold">{transferTarget.username}</span>
+                                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Gift XP</h2>
+                                <p className="text-slate-500 dark:text-slate-400 text-xs">
+                                    Send XP to <span className="text-slate-900 dark:text-white font-bold">{transferTarget.username}</span>
                                 </p>
                             </div>
 
                             <form onSubmit={handleTransferSubmit} className="space-y-4">
-                                <div className="bg-slate-800/50 p-4 rounded-xl border border-white/5 flex flex-col items-center">
-                                    <label className="text-xs font-bold text-slate-500 uppercase mb-2">Amount to Send</label>
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-white/5 flex flex-col items-center">
+                                    <label className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-2">Amount to Send</label>
                                     <div className="relative">
                                         <input
                                             type="number"
                                             value={transferAmount}
                                             onChange={(e) => setTransferAmount(e.target.value)}
-                                            className="bg-transparent text-center text-3xl font-black text-white w-32 focus:outline-none placeholder:text-slate-700"
+                                            className="bg-transparent text-center text-3xl font-black text-slate-900 dark:text-white w-32 focus:outline-none placeholder:text-slate-300 dark:placeholder:text-slate-700"
                                             placeholder="0"
                                             min="1"
                                             max={user?.xp || 0}
                                             autoFocus
                                         />
-                                        <span className="text-indigo-400 font-bold ml-1">XP</span>
+                                        <span className="text-indigo-500 dark:text-indigo-400 font-bold ml-1">XP</span>
                                     </div>
                                     <div className="text-[10px] text-slate-500 mt-2">
-                                        Your Balance: <span className="text-white font-bold">{user?.xp || 0} XP</span>
+                                        Your Balance: <span className="text-slate-900 dark:text-white font-bold">{user?.xp || 0} XP</span>
                                     </div>
                                 </div>
 
@@ -635,8 +612,8 @@ const Dashboard: React.FC = () => {
                                         <div key={idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                             <div
                                                 className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm ${isMe
-                                                    ? 'bg-indigo-600 text-white rounded-br-none'
-                                                    : 'bg-slate-700 text-slate-200 rounded-bl-none'
+                                                    ? 'bg-indigo-600 text-white rounded-br-none shadow-md shadow-indigo-500/20'
+                                                    : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none'
                                                     }`}
                                             >
                                                 {msg.content}
@@ -674,7 +651,7 @@ const Dashboard: React.FC = () => {
             {/* Friends Modal */}
             <AnimatePresence>
                 {showFriendsModal && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -729,7 +706,7 @@ const Dashboard: React.FC = () => {
                                                     onChange={(e) => setSearchQuery(e.target.value)}
                                                     onKeyDown={(e) => e.key === 'Enter' && searchUsers()}
                                                     placeholder="Find specific username..."
-                                                    className="w-full bg-slate-950/50 border border-slate-700/50 text-white rounded-xl py-4 pl-12 pr-4 text-lg focus:outline-none focus:border-indigo-500/50 placeholder:text-slate-600 font-medium"
+                                                    className="w-full bg-slate-100 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-700/50 text-slate-900 dark:text-white rounded-xl py-4 pl-12 pr-4 text-lg focus:outline-none focus:border-indigo-500/50 placeholder:text-slate-400 dark:placeholder:text-slate-600 font-medium"
                                                 />
                                             </div>
                                             <button
@@ -746,13 +723,13 @@ const Dashboard: React.FC = () => {
                                                 <div className="text-center text-slate-500 py-8">No users found.</div>
                                             )}
                                             {searchResults.map(u => (
-                                                <div key={u._id} className="flex items-center justify-between bg-slate-800/50 p-4 rounded-xl border border-white/5">
+                                                <div key={u._id} className="flex items-center justify-between bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-none">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-full bg-slate-700 overflow-hidden">
-                                                            {u.profilePicture ? <img src={u.profilePicture} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-500"><User size={16} /></div>}
+                                                        <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                                                            {u.profilePicture ? <img src={u.profilePicture} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500"><User size={16} /></div>}
                                                         </div>
                                                         <div>
-                                                            <div className="font-bold text-white">{u.username}</div>
+                                                            <div className="font-bold text-slate-900 dark:text-white">{u.username}</div>
                                                             <div className="text-xs text-slate-400 flex gap-2">
                                                                 <span>Level {Math.floor((u.xp || 0) / 1000) + 1}</span>
                                                                 <span>•</span>
@@ -884,21 +861,18 @@ const Dashboard: React.FC = () => {
                 <div className="absolute top-[40%] left-[40%] w-[30%] h-[30%] bg-blue-600/10 rounded-full blur-[120px]" />
             </div>
 
-            <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
+            <div
                 className="relative z-10 max-w-7xl mx-auto space-y-8"
             >
                 {/* Navbar */}
-                <motion.nav variants={itemVariants} className="glass-panel p-4 rounded-2xl flex flex-wrap gap-4 justify-between items-center sticky top-4 z-50 backdrop-blur-xl bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none transition-all duration-300">
+                <nav className="glass-panel p-4 rounded-2xl flex flex-wrap gap-4 justify-between items-center sticky top-4 z-50 backdrop-blur-xl bg-white/70 dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none transition-all duration-300">
                     <div className="flex items-center gap-3">
                         <div className="bg-gradient-to-tr from-orange-500 to-red-600 p-2 rounded-xl shadow-lg shadow-orange-500/20">
                             <Flame className="text-white fill-white" size={24} />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">StreakGame</h1>
-                            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold block -mt-1">Rank Up</span>
+                            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">StreakGame</h1>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold block -mt-1">Rank Up</span>
                         </div>
                     </div>
 
@@ -984,6 +958,24 @@ const Dashboard: React.FC = () => {
                             </button>
 
                             <button
+                                onClick={() => navigate('/analytics')}
+                                className="p-2.5 text-slate-400 hover:text-indigo-400 transition-colors rounded-xl hover:bg-indigo-500/10 flex items-center gap-2"
+                                title="Analytics"
+                            >
+                                <BarChart3 size={20} />
+                                <span className="text-sm font-semibold hidden sm:inline">Analytics</span>
+                            </button>
+
+                            <button
+                                onClick={() => navigate('/betting')}
+                                className="p-2.5 text-slate-400 hover:text-orange-400 transition-colors rounded-xl hover:bg-orange-500/10 flex items-center gap-2"
+                                title="Betting"
+                            >
+                                <Target size={20} />
+                                <span className="text-sm font-semibold hidden sm:inline">Betting</span>
+                            </button>
+
+                            <button
                                 onClick={handleLogout}
                                 className="p-2.5 text-slate-400 hover:text-red-400 transition-colors rounded-xl hover:bg-red-500/10"
                                 title="Logout"
@@ -992,12 +984,12 @@ const Dashboard: React.FC = () => {
                             </button>
                         </div>
                     </div>
-                </motion.nav>
+                </nav>
 
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column (Main) */}
-                    <motion.div variants={itemVariants} className="lg:col-span-2 space-y-8">
+                    <div className="lg:col-span-2 space-y-8">
 
                         {/* Welcome Header */}
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -1027,17 +1019,13 @@ const Dashboard: React.FC = () => {
 
                         {/* Risk Meter Section */}
                         {user.role !== 'admin' && riskAnalysis && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.2 }}
-                            >
+                            <div>
                                 <RiskMeter
                                     score={riskAnalysis.score}
                                     level={riskAnalysis.level}
                                     factors={riskAnalysis.factors}
                                 />
-                            </motion.div>
+                            </div>
                         )}
 
                         {/* Pending Rewards Alert */}
@@ -1087,7 +1075,7 @@ const Dashboard: React.FC = () => {
                         {/* Royal Pass Section - LIST OF PASSES */}
                         {user.role !== 'admin' && royalPasses.length > 0 && (
                             <div className="space-y-4">
-                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                                     <Crown className="text-amber-500" /> Available Royal Passes
                                 </h3>
                                 <div className="grid grid-cols-1 gap-4">
@@ -1109,7 +1097,7 @@ const Dashboard: React.FC = () => {
 
                         {/* Seasons Grid Section */}
                         <div>
-                            <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-white">
+                            <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
                                 <Zap className="text-indigo-500 fill-indigo-500" />
                                 {user?.role === 'admin' ? 'Manage Seasons' : 'Your Active Seasons'}
                             </h3>
@@ -1141,7 +1129,6 @@ const Dashboard: React.FC = () => {
                                             return (
                                                 <motion.div
                                                     key={season._id}
-                                                    variants={itemVariants}
                                                     whileHover={{ y: -5, scale: 1.02 }}
                                                     onClick={() => handleSeasonClick(season)}
                                                     className={`p-6 rounded-2xl border-l-4 cursor-pointer relative overflow-hidden group transition-all duration-300 ${theme.styles.cardBg} ${theme.styles.border} ${theme.styles.shadow} glass-card-hover backdrop-blur-md border`}
@@ -1195,23 +1182,41 @@ const Dashboard: React.FC = () => {
                             )}
                         </div>
 
-                    </motion.div>
+                    </div>
 
                     {/* Right Column (Sidebar) */}
-                    <motion.div variants={itemVariants} className="hidden lg:block lg:col-span-1 space-y-8 h-fit sticky top-24">
-                        <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-3xl p-6 relative overflow-hidden shadow-xl shadow-indigo-500/20 group cursor-pointer" onClick={() => navigate('/chat')}>
-                            <div className="absolute top-0 right-0 p-4 opacity-20 transform rotate-12 group-hover:rotate-0 transition-all duration-500">
-                                <MessageSquare size={80} className="text-white fill-white/20" />
-                            </div>
-                            <div className="relative z-10 text-white">
-                                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-sm border border-white/10 group-hover:scale-110 transition-transform">
-                                    <Users size={24} />
+                    <div className="hidden lg:block lg:col-span-1 space-y-8 h-fit sticky top-24">
+                        <div onClick={() => navigate('/chat')} className="relative group cursor-pointer">
+                            {/* Animated Glow (Behind) */}
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-3xl blur opacity-30 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+
+                            {/* Main Card */}
+                            <div className="relative h-full bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-white/10 shadow-xl overflow-hidden">
+                                {/* Decorative Background Blobs */}
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl -mr-16 -mt-16 transition-all group-hover:bg-purple-500/20"></div>
+                                <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -ml-16 -mb-16 transition-all group-hover:bg-blue-500/20"></div>
+
+                                {/* Content */}
+                                <div className="relative z-10 flex flex-col h-full">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="p-3 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                                            <MessageSquare size={24} className="text-indigo-600 dark:text-indigo-400" />
+                                        </div>
+                                        <div className="flex -space-x-2">
+                                            {/* Fake avatars for visual cue */}
+                                            <div className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 flex items-center justify-center text-[10px] text-slate-500 font-bold">A</div>
+                                            <div className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-300 flex items-center justify-center text-[10px] text-slate-600 font-bold">B</div>
+                                            <div className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-400 flex items-center justify-center text-[10px] text-white font-bold">+9</div>
+                                        </div>
+                                    </div>
+
+                                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">Group Chat</h3>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">Connect with the squad!</p>
+
+                                    <div className="mt-auto flex items-center text-indigo-600 dark:text-indigo-400 font-bold text-sm gap-2 group-hover:gap-3 transition-all">
+                                        Open Chat <ArrowRight size={16} />
+                                    </div>
                                 </div>
-                                <h3 className="text-2xl font-bold mb-1">Group Chat</h3>
-                                <p className="text-indigo-100 text-sm mb-4 max-w-[80%]">Connect with your squad and plan your next streak!</p>
-                                <button className="bg-white text-indigo-600 px-4 py-2 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 group-hover:gap-3 transition-all">
-                                    Open Chat <ArrowRight size={16} />
-                                </button>
                             </div>
                         </div>
 
@@ -1227,10 +1232,10 @@ const Dashboard: React.FC = () => {
                                 <a href="#" className="text-slate-600 hover:text-slate-400 text-xs transition-colors">Help</a>
                             </div>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
 
-            </motion.div>
+            </div>
 
             {/* Login Modal */}
             <AnimatePresence>

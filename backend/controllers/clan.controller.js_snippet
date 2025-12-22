@@ -1,0 +1,64 @@
+
+/**
+ * Invite a user to join the clan (admin only)
+ */
+exports.inviteMember = async (req, res) => {
+    try {
+        const clanId = req.params.id;
+        const { targetUserId } = req.body;
+        const adminId = req.user._id;
+
+        const clan = await Clan.findById(clanId);
+        if (!clan) return res.status(404).send('Clan not found');
+
+        // Check if requester is admin
+        if (clan.admin.toString() !== adminId.toString()) {
+            return res.status(403).send('Only clan admin can invite members');
+        }
+
+        const targetUser = await User.findById(targetUserId);
+        if (!targetUser) return res.status(404).send('User not found');
+
+        // Check if already a member
+        if (clan.members.includes(targetUserId)) {
+            return res.status(400).send('User is already a member');
+        }
+
+        // Check if already invited
+        const existingInvite = targetUser.clanInvites && targetUser.clanInvites.find(i => i.clan.toString() === clanId);
+        if (existingInvite) {
+            return res.status(400).send('User has already been invited');
+        }
+
+        // Add invite
+        await User.findByIdAndUpdate(targetUserId, {
+            $push: {
+                clanInvites: {
+                    clan: clanId,
+                    invitedBy: adminId
+                }
+            }
+        });
+
+        // Notify target user
+        const notificationService = require('../services/notification.service');
+        const io = req.app.get('io');
+        const admin = await User.findById(adminId).select('username');
+
+        const notification = await notificationService.createNotification(
+            targetUserId,
+            'clan_invite',
+            `${admin.username} invited you to join "${clan.name}"`,
+            { clanId: clan._id, clanName: clan.name, inviterName: admin.username }
+        );
+
+        if (io) {
+            notificationService.emitNotification(io, targetUserId, notification);
+        }
+
+        res.json({ success: true, message: 'Invitation sent' });
+    } catch (err) {
+        console.error('Invite Member Error:', err);
+        res.status(500).send(err.message || 'Failed to invite member');
+    }
+};

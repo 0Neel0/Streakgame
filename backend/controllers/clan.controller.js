@@ -550,3 +550,283 @@ exports.squadCheckIn = async (req, res) => {
         res.status(500).send(err.message || 'Failed to perform Squad Check-in');
     }
 };
+
+/**
+ * Invite a user to join the clan (admin only)
+ */
+exports.inviteMember = async (req, res) => {
+    try {
+        const clanId = req.params.id;
+        const { targetUserId } = req.body;
+        const adminId = req.user._id;
+
+        const clan = await Clan.findById(clanId);
+        if (!clan) return res.status(404).send('Clan not found');
+
+        // Check if requester is admin
+        if (clan.admin.toString() !== adminId.toString()) {
+            return res.status(403).send('Only clan admin can invite members');
+        }
+
+        const targetUser = await User.findById(targetUserId);
+        if (!targetUser) return res.status(404).send('User not found');
+
+        // Check if already a member
+        if (clan.members.includes(targetUserId)) {
+            return res.status(400).send('User is already a member');
+        }
+
+        // Check if already invited
+        const existingInvite = targetUser.clanInvites && targetUser.clanInvites.find(i => i.clan.toString() === clanId);
+        if (existingInvite) {
+            return res.status(400).send('User has already been invited');
+        }
+
+        // Add invite
+        await User.findByIdAndUpdate(targetUserId, {
+            $push: {
+                clanInvites: {
+                    clan: clanId,
+                    invitedBy: adminId
+                }
+            }
+        });
+
+        // Notify target user
+        const notificationService = require('../services/notification.service');
+        const io = req.app.get('io');
+        const admin = await User.findById(adminId).select('username');
+
+        const notification = await notificationService.createNotification(
+            targetUserId,
+            'clan_invite',
+            `${admin.username} invited you to join "${clan.name}"`,
+            { clanId: clan._id, clanName: clan.name, inviterName: admin.username }
+        );
+
+        if (io) {
+            notificationService.emitNotification(io, targetUserId, notification);
+        }
+
+
+        res.json({ success: true, message: 'Invitation sent' });
+    } catch (err) {
+        console.error('Invite Member Error:', err);
+        res.status(500).send(err.message || 'Failed to invite member');
+    }
+};
+
+/**
+ * Get user's pending clan invites
+ */
+exports.getUserInvites = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId).populate({
+            path: 'clanInvites.clan',
+            select: 'name memberCount'
+        }).populate({
+            path: 'clanInvites.invitedBy',
+            select: 'username profilePicture'
+        });
+
+        if (!user) return res.status(404).send('User not found');
+
+        // Filter out null clans (if deleted)
+        const validInvites = user.clanInvites.filter(i => i.clan && i.invitedBy);
+
+        res.json(validInvites);
+    } catch (err) {
+        res.status(500).send(err.message || 'Failed to get invites');
+    }
+};
+
+/**
+ * Accept clan invite
+ */
+exports.acceptInvite = async (req, res) => {
+    try {
+        const clanId = req.params.id;
+        const userId = req.user._id;
+
+        const clan = await Clan.findById(clanId);
+        if (!clan) return res.status(404).send('Clan not found');
+
+        // Check membership
+        if (clan.members.includes(userId)) {
+            // Just clear invite if already member
+            await User.findByIdAndUpdate(userId, {
+                $pull: { clanInvites: { clan: clanId } }
+            });
+            return res.status(400).send('Already a member');
+        }
+
+        // Add to members
+        clan.members.push(userId);
+        await clan.save();
+
+        // Update User: Add clan, remove invite
+        await User.findByIdAndUpdate(userId, {
+            $addToSet: { clans: clanId },
+            $pull: { clanInvites: { clan: clanId } }
+        });
+
+        // Notify Admin
+        const notificationService = require('../services/notification.service');
+        const user = await User.findById(userId).select('username');
+        const io = req.app.get('io');
+
+        const notif = await notificationService.createNotification(
+            clan.admin,
+            'clan_join',
+            `${user.username} accepted your invitation to "${clan.name}"`,
+            { clanId: clan._id, clanName: clan.name, username: user.username }
+        );
+
+        if (io) notificationService.emitNotification(io, clan.admin, notif);
+
+        res.json({ success: true, message: 'Joined clan successfully' });
+    } catch (err) {
+        res.status(500).send(err.message || 'Failed to accept invite');
+    }
+};
+
+/**
+ * Reject clan invite
+ */
+exports.rejectInvite = async (req, res) => {
+    try {
+        const clanId = req.params.id;
+        const userId = req.user._id;
+
+        await User.findByIdAndUpdate(userId, {
+            $pull: { clanInvites: { clan: clanId } }
+        });
+
+        res.json({ success: true, message: 'Invitation rejected' });
+    } catch (err) {
+        res.status(500).send(err.message || 'Failed to reject invite');
+    }
+};
+
+/**
+ * Transfer XP to a clan member
+ */
+exports.transferClanXP = async (req, res) => {
+    try {
+        const clanId = req.params.id;
+        const { targetUserId, amount } = req.body;
+        const senderId = req.user._id;
+
+        if (!amount || amount <= 0) return res.status(400).send('Invalid amount');
+        if (targetUserId === senderId.toString()) return res.status(400).send('Cannot send XP to self');
+
+        const clan = await Clan.findById(clanId);
+        if (!clan) return res.status(404).send('Clan not found');
+
+        // Check membership
+        if (!clan.members.includes(senderId)) return res.status(403).send('You are not a member of this clan');
+        if (!clan.members.includes(targetUserId)) return res.status(400).send('Recipient is not a member of this clan');
+
+        const sender = await User.findById(senderId);
+        const recipient = await User.findById(targetUserId);
+
+        if (!sender || !recipient) return res.status(404).send('User not found');
+
+        if ((sender.xp || 0) < amount) {
+            return res.status(400).send('Insufficient XP balance');
+        }
+
+        // Execute Transfer
+        sender.xp -= amount;
+        recipient.xp = (recipient.xp || 0) + amount;
+
+        await sender.save();
+        await recipient.save();
+
+        // Notify Recipient
+        const notificationService = require('../services/notification.service');
+        const io = req.app.get('io');
+
+        const notif = await notificationService.createNotification(
+            targetUserId,
+            'xp_received',
+            `You received ${amount} XP from ${sender.username} (Clan: ${clan.name})`,
+            { senderId: sender._id, senderName: sender.username, amount, clanId: clan._id }
+        );
+
+        if (io) notificationService.emitNotification(io, targetUserId, notif);
+
+        res.json({
+            success: true,
+            message: `Successfully sent ${amount} XP to ${recipient.username}`,
+            newBalance: sender.xp
+        });
+
+    } catch (err) {
+        res.status(500).send(err.message || 'Failed to transfer XP');
+    }
+};
+
+/**
+ * Send a message to clan chat
+ */
+exports.sendClanMessage = async (req, res) => {
+    try {
+        const clanId = req.params.id;
+        const { content } = req.body;
+        const senderId = req.user._id;
+
+        const clan = await Clan.findById(clanId);
+        if (!clan) return res.status(404).send('Clan not found');
+
+        if (!clan.members.includes(senderId)) return res.status(403).send('You are not a member of this clan');
+
+        if (!content) return res.status(400).send('Content is required');
+
+        const Message = require('../models/message.model');
+        const newMessage = new Message({
+            sender: senderId,
+            clan: clanId,
+            content
+        });
+
+        await newMessage.save();
+        await newMessage.populate('sender', 'username profilePicture');
+
+        // Emit to clan room
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`clan_${clanId}`).emit('new_clan_message', newMessage);
+        }
+
+        res.json(newMessage);
+    } catch (err) {
+        res.status(500).send(err.message || 'Failed to send message');
+    }
+};
+
+/**
+ * Get clan messages
+ */
+exports.getClanMessages = async (req, res) => {
+    try {
+        const clanId = req.params.id;
+        const userId = req.user._id;
+
+        const clan = await Clan.findById(clanId);
+        if (!clan) return res.status(404).send('Clan not found');
+
+        if (!clan.members.includes(userId)) return res.status(403).send('You are not a member of this clan');
+
+        const Message = require('../models/message.model');
+        const messages = await Message.find({ clan: clanId })
+            .sort({ createdAt: 1 })
+            .limit(100) // Limit to last 100 messages for performance
+            .populate('sender', 'username profilePicture');
+
+        res.json(messages);
+    } catch (err) {
+        res.status(500).send(err.message || 'Failed to get messages');
+    }
+};

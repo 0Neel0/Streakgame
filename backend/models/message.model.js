@@ -16,6 +16,11 @@ const messageSchema = new mongoose.Schema({
         ref: 'Group',
         required: false
     },
+    clan: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Clan',
+        required: false
+    },
     content: {
         type: String,
         required: false

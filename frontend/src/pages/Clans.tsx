@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Plus, LogIn, Search, Shield, X, Copy, Check, ArrowLeft } from 'lucide-react';
+import { Users, Plus, LogIn, Search, Shield, X, ArrowLeft, Mail, Check, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -31,6 +32,7 @@ const Clans: React.FC = () => {
     const [showJoinModal, setShowJoinModal] = useState(false);
     const [newClan, setNewClan] = useState({ name: '', description: '', seasonId: '' });
     const [joinClanId, setJoinClanId] = useState('');
+    const [invites, setInvites] = useState<any[]>([]);
     const navigate = useNavigate();
 
     const token = localStorage.getItem('auth-token');
@@ -46,7 +48,20 @@ const Clans: React.FC = () => {
 
     useEffect(() => {
         fetchUserClans();
+        fetchUserClans();
+        fetchInvites();
     }, []);
+
+    const fetchInvites = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/clan/user/invites`, {
+                headers: { 'auth-token': token }
+            });
+            setInvites(response.data);
+        } catch (err) {
+            console.error('Error fetching invites:', err);
+        }
+    };
 
     const fetchUserClans = async () => {
         try {
@@ -110,6 +125,31 @@ const Clans: React.FC = () => {
             fetchUserClans();
         } catch (err: any) {
             alert(err.response?.data || 'Failed to delete clan');
+        }
+    };
+
+    const handleAcceptInvite = async (clanId: string) => {
+        try {
+            await axios.post(`${API_URL}/clan/${clanId}/accept-invite`, {}, {
+                headers: { 'auth-token': token }
+            });
+            toast.success('Joined clan!');
+            fetchUserClans();
+            fetchInvites();
+        } catch (err: any) {
+            toast.error(err.response?.data || 'Failed to join');
+        }
+    };
+
+    const handleRejectInvite = async (clanId: string) => {
+        try {
+            await axios.post(`${API_URL}/clan/${clanId}/reject-invite`, {}, {
+                headers: { 'auth-token': token }
+            });
+            toast.success('Invitation rejected');
+            fetchInvites();
+        } catch (err: any) {
+            toast.error(err.response?.data || 'Failed to reject');
         }
     };
 
@@ -180,6 +220,48 @@ const Clans: React.FC = () => {
                     </div>
                 </motion.div>
 
+                {/* Pending Invites Section */}
+                {invites.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-12"
+                    >
+                        <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-slate-900 dark:text-white">
+                            <Mail className="text-indigo-500" /> Pending Invites
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {invites.map((invite) => (
+                                <div key={invite._id} className="bg-white dark:bg-slate-900/50 p-6 rounded-2xl border border-indigo-500/30 shadow-lg shadow-indigo-500/10 backdrop-blur-sm relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h4 className="text-lg font-bold text-slate-900 dark:text-white">{invite.clan?.name}</h4>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Invited by <span className="text-indigo-500 font-bold">@{invite.invitedBy?.username}</span></p>
+                                        </div>
+                                        <Users size={20} className="text-indigo-400" />
+                                    </div>
+
+                                    <div className="flex gap-2 mt-4">
+                                        <button
+                                            onClick={() => handleAcceptInvite(invite.clan._id)}
+                                            className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <Check size={16} /> Accept
+                                        </button>
+                                        <button
+                                            onClick={() => handleRejectInvite(invite.clan._id)}
+                                            className="flex-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-2 rounded-xl text-sm transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <Trash2 size={16} /> Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* Content Section */}
                 <AnimatePresence mode="wait">
                     {clans.length === 0 ? (
@@ -212,7 +294,7 @@ const Clans: React.FC = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.1 }}
-                                    className="group relative bg-white/80 dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200 dark:border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1"
+                                    className="group relative bg-white dark:bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 hover:border-purple-500/50 transition-all duration-300 shadow-xl shadow-slate-200/50 dark:shadow-none hover:shadow-2xl hover:shadow-purple-500/10 hover:-translate-y-1"
                                 >
                                     {/* Admin Badge */}
                                     {clan.admin._id === userId && (
@@ -283,127 +365,131 @@ const Clans: React.FC = () => {
                         </div>
                     )}
                 </AnimatePresence>
-            </div>
+            </div >
 
             {/* Create Clan Modal */}
             <AnimatePresence>
-                {showCreateModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-                        onClick={() => setShowCreateModal(false)}
-                    >
+                {
+                    showCreateModal && (
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl p-8 max-w-md w-full shadow-2xl shadow-purple-900/20"
-                            onClick={(e) => e.stopPropagation()}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+                            onClick={() => setShowCreateModal(false)}
                         >
-                            <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-                                Create New Clan
-                            </h2>
-                            <form onSubmit={handleCreateClan} className="space-y-5">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Clan Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={newClan.name}
-                                        onChange={(e) => setNewClan({ ...newClan, name: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 text-slate-900 dark:text-white"
-                                        placeholder="e.g. The Streak Masters"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Description</label>
-                                    <textarea
-                                        value={newClan.description}
-                                        onChange={(e) => setNewClan({ ...newClan, description: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 resize-none h-32 text-slate-900 dark:text-white"
-                                        placeholder="What is your clan about?"
-                                    />
-                                </div>
-                                <div className="flex gap-3 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowCreateModal(false)}
-                                        className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium rounded-xl transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-purple-500/25 transition-all"
-                                    >
-                                        Create Clan
-                                    </button>
-                                </div>
-                            </form>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Join Clan Modal */}
-            <AnimatePresence>
-                {showJoinModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-                        onClick={() => setShowJoinModal(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl p-8 max-w-md w-full shadow-2xl shadow-blue-900/20"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
-                                Join a Clan
-                            </h2>
-                            <p className="text-slate-500 dark:text-slate-400 mb-6">Enter the Clan ID provided by an admin</p>
-
-                            <form onSubmit={handleJoinClan} className="space-y-5">
-                                <div>
-                                    <div className="relative">
-                                        <Search className="absolute left-4 top-3.5 text-slate-500" size={20} />
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl p-8 max-w-md w-full shadow-2xl shadow-purple-900/20"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+                                    Create New Clan
+                                </h2>
+                                <form onSubmit={handleCreateClan} className="space-y-5">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Clan Name</label>
                                         <input
                                             type="text"
                                             required
-                                            value={joinClanId}
-                                            onChange={(e) => setJoinClanId(e.target.value)}
-                                            className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 font-mono text-slate-900 dark:text-white"
-                                            placeholder="Paste Clan ID here"
+                                            value={newClan.name}
+                                            onChange={(e) => setNewClan({ ...newClan, name: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 text-slate-900 dark:text-white"
+                                            placeholder="e.g. The Streak Masters"
                                         />
                                     </div>
-                                </div>
-                                <div className="flex gap-3 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowJoinModal(false)}
-                                        className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium rounded-xl transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all"
-                                    >
-                                        Join Squad
-                                    </button>
-                                </div>
-                            </form>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Description</label>
+                                        <textarea
+                                            value={newClan.description}
+                                            onChange={(e) => setNewClan({ ...newClan, description: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 resize-none h-32 text-slate-900 dark:text-white"
+                                            placeholder="What is your clan about?"
+                                        />
+                                    </div>
+                                    <div className="flex gap-3 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCreateModal(false)}
+                                            className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium rounded-xl transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-purple-500/25 transition-all"
+                                        >
+                                            Create Clan
+                                        </button>
+                                    </div>
+                                </form>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
+                    )
+                }
+            </AnimatePresence >
+
+            {/* Join Clan Modal */}
+            <AnimatePresence>
+                {
+                    showJoinModal && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+                            onClick={() => setShowJoinModal(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl p-8 max-w-md w-full shadow-2xl shadow-blue-900/20"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
+                                    Join a Clan
+                                </h2>
+                                <p className="text-slate-500 dark:text-slate-400 mb-6">Enter the Clan ID provided by an admin</p>
+
+                                <form onSubmit={handleJoinClan} className="space-y-5">
+                                    <div>
+                                        <div className="relative">
+                                            <Search className="absolute left-4 top-3.5 text-slate-500" size={20} />
+                                            <input
+                                                type="text"
+                                                required
+                                                value={joinClanId}
+                                                onChange={(e) => setJoinClanId(e.target.value)}
+                                                className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder:text-slate-400 dark:placeholder:text-slate-600 font-mono text-slate-900 dark:text-white"
+                                                placeholder="Paste Clan ID here"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowJoinModal(false)}
+                                            className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium rounded-xl transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all"
+                                        >
+                                            Join Squad
+                                        </button>
+                                    </div>
+                                </form>
+                            </motion.div>
+                        </motion.div>
+                    )
+                }
+            </AnimatePresence >
+        </div >
     );
 };
 

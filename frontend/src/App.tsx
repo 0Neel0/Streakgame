@@ -12,6 +12,8 @@ import Chat from './pages/Chat';
 import Clans from './pages/Clans';
 import ClanDetails from './pages/ClanDetails';
 import NotificationList from './pages/NotificationList';
+import Analytics from './pages/Analytics';
+import Betting from './pages/Betting';
 
 const PrivateRoute = ({ children }: { children: React.ReactElement }) => {
   const { user, loading } = useAuth();
@@ -62,6 +64,8 @@ function App() {
                 <Route path="/clans" element={<PrivateRoute><Clans /></PrivateRoute>} />
                 <Route path="/clan/:id" element={<PrivateRoute><ClanDetails /></PrivateRoute>} />
                 <Route path="/notifications" element={<PrivateRoute><NotificationList /></PrivateRoute>} />
+                <Route path="/analytics" element={<PrivateRoute><Analytics /></PrivateRoute>} />
+                <Route path="/betting" element={<PrivateRoute><Betting /></PrivateRoute>} />
                 <Route path="*" element={<Navigate to="/login" />} />
               </Routes>
             </div>

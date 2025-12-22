@@ -39,4 +39,25 @@ router.post('/:id/transfer', clanController.transferOwnership);
 // Delete a clan (admin only)
 router.delete('/:id', clanController.deleteClan);
 
+// Invite a user to clan (admin only)
+router.post('/:id/invite', clanController.inviteMember);
+
+// Get pending clan invites
+router.get('/user/invites', clanController.getUserInvites);
+
+// Accept invite
+router.post('/:id/accept-invite', clanController.acceptInvite);
+
+// Reject invite
+router.post('/:id/reject-invite', clanController.rejectInvite);
+
+// Clan XP Transfer
+router.post('/:id/transfer-xp', clanController.transferClanXP);
+
+// Clan Chat - Get Messages
+router.get('/:id/messages', clanController.getClanMessages);
+
+// Clan Chat - Send Message
+router.post('/:id/messages', clanController.sendClanMessage);
+
 module.exports = router;

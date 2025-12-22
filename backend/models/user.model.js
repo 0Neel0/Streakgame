@@ -127,6 +127,20 @@ const UserSchema = new mongoose.Schema({
     clans: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Clan'
+    }],
+    clanInvites: [{
+        clan: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Clan'
+        },
+        invitedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        date: {
+            type: Date,
+            default: Date.now
+        }
     }]
 }, { timestamps: true });
 

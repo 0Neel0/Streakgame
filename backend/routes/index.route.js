@@ -15,6 +15,9 @@ router.use('/groups', require('./group.route'));
 router.use('/risk', require('./risk.route'));
 router.use('/clan', require('./clan.route'));
 router.use('/notifications', require('./notification.route'));
+router.use('/analytics', require('./analytics.route'));
+router.use('/bet', require('./bet.route'));
+router.use('/challenge', require('./challenge.route'));
 
 
 module.exports = router;

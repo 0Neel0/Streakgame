@@ -84,11 +84,30 @@ exports.checkInUserToSeason = async (userId, seasonId, checkInDate) => {
                 user.unclaimedRewards.push({ xp: 100, reason: `10 Day Season Streak` });
             }
 
+
         } else {
             // Break in streak
             seasonStreak.streak = 1;
             seasonStreak.lastLoginDate = now;
             message = 'Streak broken but checked in';
+
+            // Check for active friend challenges and resolve them as lost
+            const Bet = require('../models/bet.model');
+            const challengeController = require('../controllers/challenge.controller');
+
+            const activeChallenges = await Bet.find({
+                betType: 'friend_challenge',
+                challengeStatus: 'active',
+                $or: [
+                    { challengerId: userId },
+                    { opponentId: userId }
+                ]
+            });
+
+            // Resolve all active challenges where this user is a participant
+            for (const challenge of activeChallenges) {
+                await challengeController.resolveFriendChallenge(challenge._id, userId);
+            }
         }
     } else {
         // First time check-in for this season

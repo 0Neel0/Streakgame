@@ -9,6 +9,7 @@ const app = express();
 const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
+const cron = require('node-cron');
 const io = new Server(server, {
     cors: {
         origin: "http://localhost:5173", // Frontend URL
@@ -53,6 +54,14 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Join user to a clan room
+    socket.on('join_room', (roomId) => {
+        if (roomId) {
+            socket.join(roomId);
+            console.log(`Socket ${socket.id} joined room ${roomId}`);
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
     });
@@ -74,6 +83,19 @@ const path = require('path');
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api', apiRoutes);
+
+// Schedule Streak Reminder Job
+const streakReminderService = require('./services/streak-reminder.service');
+
+// Run daily at 8 PM (20:00)
+cron.schedule('0 20 * * *', () => {
+    console.log('[Cron] Running streak reminder job at', new Date().toLocaleString());
+    streakReminderService.sendStreakReminders(io);
+}, {
+    timezone: "Asia/Kolkata" // Set your timezone
+});
+
+console.log('[Cron] Streak reminder scheduled for 8:00 PM daily');
 
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

@@ -126,6 +126,37 @@ exports.checkInSeason = async (req, res) => {
             };
         }
 
+        // Check for active bet and resolve if end date reached
+        const Bet = require('../models/bet.model');
+        const betController = require('./bet.controller');
+
+        const activeBet = await Bet.findOne({
+            userId,
+            status: 'active',
+            betType: { $ne: 'friend_challenge' } // Only solo bets
+        });
+
+        if (activeBet) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const endDate = new Date(activeBet.betEndDate);
+            endDate.setHours(0, 0, 0, 0);
+
+            // Only resolve if we've reached or passed the end date
+            if (today >= endDate) {
+                const io = req.app.get('io');
+                const betResult = await betController.resolveBet(activeBet._id, 'won', io);
+                if (betResult.success) {
+                    result.betResolved = {
+                        outcome: 'won',
+                        winnings: betResult.winnings,
+                        message: `🎉 Bet won! Maintained streak until ${endDate.toLocaleDateString()}. +${betResult.winnings} XP`
+                    };
+                }
+            }
+            // If end date not reached, bet stays active
+        }
+
         res.json(result);
     } catch (err) {
         // console.error(err); // Optional logging
