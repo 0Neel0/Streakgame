@@ -106,24 +106,58 @@ exports.getBetHistory = async (req, res) => {
         const userId = req.user._id;
         const { page = 1, limit = 10 } = req.query;
 
-        const bets = await Bet.find({ userId, status: { $in: ['won', 'lost'] } })
+        // Find bets where user is involved (solo bets OR friend challenges)
+        const betQuery = {
+            status: { $in: ['won', 'lost'] },
+            $or: [
+                { userId: userId }, // Solo bets
+                { challengerId: userId }, // Friend challenges where user is challenger
+                { opponentId: userId } // Friend challenges where user is opponent
+            ]
+        };
+
+        const bets = await Bet.find(betQuery)
             .sort({ resolvedAt: -1 })
             .limit(parseInt(limit))
-            .skip((parseInt(page) - 1) * parseInt(limit));
+            .skip((parseInt(page) - 1) * parseInt(limit))
+            .populate('challengerId', 'username')
+            .populate('opponentId', 'username');
 
-        const total = await Bet.countDocuments({ userId, status: { $in: ['won', 'lost'] } });
+        const total = await Bet.countDocuments(betQuery);
 
-        // Calculate stats
-        const wonBets = await Bet.countDocuments({ userId, status: 'won' });
-        const lostBets = await Bet.countDocuments({ userId, status: 'lost' });
-        const totalWon = await Bet.aggregate([
-            { $match: { userId: userId, status: 'won' } },
-            { $group: { _id: null, total: { $sum: { $multiply: ['$amount', '$multiplier'] } } } }
-        ]);
-        const totalLost = await Bet.aggregate([
-            { $match: { userId: userId, status: 'lost' } },
-            { $group: { _id: null, total: { $sum: '$amount' } } }
-        ]);
+        // Calculate stats - need to determine win/loss from user's perspective
+        const allUserBets = await Bet.find(betQuery);
+
+        let wonCount = 0;
+        let lostCount = 0;
+        let totalWonXP = 0;
+        let totalLostXP = 0;
+
+        for (const bet of allUserBets) {
+            if (bet.betType === 'friend_challenge') {
+                // For friend challenges, check if user is the winner
+                const userWon = bet.winnerId && bet.winnerId.toString() === userId.toString();
+
+                if (userWon) {
+                    wonCount++;
+                    // Winner gets 2x the amount (the pot)
+                    totalWonXP += bet.amount * 2;
+                } else {
+                    lostCount++;
+                    // Loser loses their staked amount
+                    totalLostXP += bet.amount;
+                }
+            } else {
+                // Solo bets
+                if (bet.status === 'won') {
+                    wonCount++;
+                    totalWonXP += bet.amount * (bet.multiplier || 2);
+                } else if (bet.status === 'lost') {
+                    lostCount++;
+                    totalLostXP += bet.amount;
+                }
+            }
+        }
 
         res.json({
             bets,
@@ -133,17 +167,18 @@ exports.getBetHistory = async (req, res) => {
                 pages: Math.ceil(total / parseInt(limit))
             },
             stats: {
-                totalBets: wonBets + lostBets,
-                won: wonBets,
-                lost: lostBets,
-                winRate: wonBets + lostBets > 0 ? (wonBets / (wonBets + lostBets) * 100).toFixed(1) : 0,
-                totalWon: totalWon[0]?.total || 0,
-                totalLost: totalLost[0]?.total || 0,
-                netProfit: (totalWon[0]?.total || 0) - (totalLost[0]?.total || 0)
+                totalBets: wonCount + lostCount,
+                won: wonCount,
+                lost: lostCount,
+                winRate: wonCount + lostCount > 0 ? (wonCount / (wonCount + lostCount) * 100).toFixed(1) : 0,
+                totalWon: totalWonXP,
+                totalLost: totalLostXP,
+                netProfit: totalWonXP - totalLostXP
             }
         });
 
     } catch (err) {
+        console.error('[Bet] History error:', err);
         res.status(500).send(err.message);
     }
 };

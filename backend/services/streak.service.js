@@ -94,6 +94,7 @@ exports.checkInUserToSeason = async (userId, seasonId, checkInDate) => {
             // Check for active friend challenges and resolve them as lost
             const Bet = require('../models/bet.model');
             const challengeController = require('../controllers/challenge.controller');
+            const betController = require('../controllers/bet.controller');
 
             const activeChallenges = await Bet.find({
                 betType: 'friend_challenge',
@@ -107,6 +108,18 @@ exports.checkInUserToSeason = async (userId, seasonId, checkInDate) => {
             // Resolve all active challenges where this user is a participant
             for (const challenge of activeChallenges) {
                 await challengeController.resolveFriendChallenge(challenge._id, userId);
+            }
+
+            // Also resolve any active solo bets as lost
+            const activeSoloBets = await Bet.find({
+                userId,
+                status: 'active',
+                betType: { $ne: 'friend_challenge' } // Solo bets only
+            });
+
+            for (const bet of activeSoloBets) {
+                await betController.resolveBet(bet._id, 'lost', null);
+                console.log(`[Streak] Resolved solo bet ${bet._id} as lost due to streak break`);
             }
         }
     } else {

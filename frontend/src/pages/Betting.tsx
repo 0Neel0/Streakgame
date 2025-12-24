@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DollarSign, TrendingUp, Trophy, XCircle, Target, Flame, AlertTriangle, Users, Check, X as XIcon, Swords } from 'lucide-react';
+import { DollarSign, TrendingUp, Trophy, XCircle, Target, Flame, AlertTriangle, Users, Check, X as XIcon, Swords, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { useNavigate } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -21,6 +22,7 @@ interface Bet {
     challengerId?: any;
     challengeStatus?: string;
     betEndDate?: string;
+    winnerId?: string;
 }
 
 interface BetStats {
@@ -42,6 +44,7 @@ interface Friend {
 }
 
 const Betting: React.FC = () => {
+    const navigate = useNavigate();
     const [activeBet, setActiveBet] = useState<Bet | null>(null);
     const [betHistory, setBetHistory] = useState<Bet[]>([]);
     const [betStats, setBetStats] = useState<BetStats | null>(null);
@@ -51,6 +54,7 @@ const Betting: React.FC = () => {
     const [betEndDate, setBetEndDate] = useState('');
     const [creating, setCreating] = useState(false);
     const [activeTab, setActiveTab] = useState<'solo' | 'friends'>('solo');
+    const [showHistory, setShowHistory] = useState(false);
 
     // Friend challenges
     const [showChallengeModal, setShowChallengeModal] = useState(false);
@@ -260,6 +264,17 @@ const Betting: React.FC = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/20 to-red-50/20 dark:from-slate-950 dark:via-orange-950/20 dark:to-red-950/20 p-6 md:p-8">
             <div className="max-w-6xl mx-auto">
+                {/* Back Button */}
+                <motion.button
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    onClick={() => navigate('/dashboard')}
+                    className="mb-6 flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors group"
+                >
+                    <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                    <span className="font-semibold">Back to Dashboard</span>
+                </motion.button>
+
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
@@ -453,19 +468,44 @@ const Betting: React.FC = () => {
                     </div>
                 )}
 
-                {/* Bet History */}
-                <div className="bg-white dark:bg-slate-900/60 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-lg">
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Bet History</h2>
-                    {betHistory.length === 0 ? (
-                        <p className="text-slate-500 dark:text-slate-400 text-center py-8">No bets yet. Place your first bet to get started!</p>
-                    ) : (
-                        <div className="space-y-2">
-                            {betHistory.map((bet) => (
-                                <BetHistoryItem key={bet._id} bet={bet} />
-                            ))}
+                {/* Bet History Toggle Button */}
+                {betStats && betStats.totalBets > 0 && (
+                    <button
+                        onClick={() => setShowHistory(!showHistory)}
+                        className="w-full bg-white dark:bg-slate-900/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-lg mb-6 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all flex items-center justify-between"
+                    >
+                        <div className="flex items-center gap-3">
+                            <Trophy className="text-orange-500" size={24} />
+                            <span className="text-lg font-bold text-slate-900 dark:text-white">
+                                {showHistory ? 'Hide' : 'View'} Bet History
+                            </span>
                         </div>
-                    )}
-                </div>
+                        <span className="text-sm text-slate-500 dark:text-slate-400">
+                            {betStats.totalBets} {betStats.totalBets === 1 ? 'bet' : 'bets'}
+                        </span>
+                    </button>
+                )}
+
+                {/* Bet History */}
+                {showHistory && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="bg-white dark:bg-slate-900/60 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-lg"
+                    >
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Bet History</h2>
+                        {betHistory.length === 0 ? (
+                            <p className="text-slate-500 dark:text-slate-400 text-center py-8">No bets yet. Place your first bet to get started!</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {betHistory.map((bet) => (
+                                    <BetHistoryItem key={bet._id} bet={bet} />
+                                ))}
+                            </div>
+                        )}
+                    </motion.div>
+                )}
             </div>
 
             {/* Bet Creation Modal */}
@@ -728,26 +768,50 @@ const BetHistoryItem: React.FC<{ bet: Bet }> = ({ bet }) => {
     const displayDate = bet.resolvedAt || bet.createdAt;
     const dateStr = displayDate ? new Date(displayDate).toLocaleDateString() : 'N/A';
 
+    // Get current user ID
+    const currentUserId = localStorage.getItem('user-data') ? JSON.parse(localStorage.getItem('user-data')!).id : null;
+
+    // Determine if this is a friend challenge and if user won
+    const isFriendChallenge = bet.betType === 'friend_challenge';
+    const userWon = isFriendChallenge
+        ? (bet.winnerId && bet.winnerId === currentUserId)
+        : bet.status === 'won';
+
+    // Calculate XP change
+    const xpChange = isFriendChallenge
+        ? (userWon ? bet.amount * 2 : bet.amount)
+        : (userWon ? bet.amount * (bet.multiplier || 2) : bet.amount);
+
+    // Get opponent name for friend challenges
+    const opponentName = isFriendChallenge
+        ? (bet.challengerId?._id === currentUserId
+            ? bet.opponentId?.username
+            : bet.challengerId?.username)
+        : null;
+
     return (
-        <div className={`p-4 rounded-xl border-2 ${bet.status === 'won' ? 'border-green-500/50 bg-green-50 dark:bg-green-900/20' : 'border-red-500/50 bg-red-50 dark:bg-red-900/20'}`}>
+        <div className={`p-4 rounded-xl border-2 ${userWon ? 'border-green-500/50 bg-green-50 dark:bg-green-900/20' : 'border-red-500/50 bg-red-50 dark:bg-red-900/20'}`}>
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    {bet.status === 'won' ? (
+                    {userWon ? (
                         <Trophy className="text-green-600 dark:text-green-400" size={24} />
                     ) : (
                         <XCircle className="text-red-600 dark:text-red-400" size={24} />
                     )}
                     <div>
                         <p className="font-bold text-slate-900 dark:text-white">
-                            {bet.status === 'won' ? `+${bet.amount * bet.multiplier} XP` : `-${bet.amount} XP`}
+                            {userWon ? `+${xpChange} XP` : `-${xpChange} XP`}
                         </p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {isFriendChallenge && opponentName && (
+                                <span className="font-semibold">vs {opponentName} • </span>
+                            )}
                             Bet: {bet.amount} XP • {dateStr}
                         </p>
                     </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${bet.status === 'won' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-                    {bet.status === 'won' ? 'WON' : 'LOST'}
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${userWon ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                    {userWon ? 'WON' : 'LOST'}
                 </span>
             </div>
         </div>

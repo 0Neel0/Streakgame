@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Award, Flame, Clock, Target, Users, Calendar } from 'lucide-react';
+import { TrendingUp, Award, Flame, Clock, Target, Users, Calendar, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -31,6 +32,7 @@ interface AdminData {
 }
 
 const Analytics: React.FC = () => {
+    const navigate = useNavigate();
     const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
     const [adminData, setAdminData] = useState<AdminData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -110,6 +112,17 @@ const Analytics: React.FC = () => {
             <div className="absolute top-40 -left-20 w-72 h-72 bg-purple-600/10 rounded-full blur-[100px] pointer-events-none"></div>
 
             <div className="max-w-7xl mx-auto relative z-10">
+                {/* Back Button */}
+                <motion.button
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    onClick={() => navigate('/dashboard')}
+                    className="mb-6 flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors group"
+                >
+                    <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                    <span className="font-semibold">Back to Dashboard</span>
+                </motion.button>
+
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
